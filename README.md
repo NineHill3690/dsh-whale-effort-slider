@@ -14,7 +14,7 @@
 [![license](https://img.shields.io/badge/license-MIT-3ddc97?style=flat-square)](LICENSE)
 [![dsh](https://img.shields.io/badge/DSH-%E2%89%A5%E2%80%900.2.0--rc.2-9b6bff?style=flat-square)](package.json)
 
-**[下载默认版](https://github.com/NineHill3690/dsh-whale-effort-slider/releases/download/v1.3.0/dsh-whale-effort-slider-1.3.0-default.zip)**　·　**[下载液态玻璃版](https://github.com/NineHill3690/dsh-whale-effort-slider/releases/download/v1.3.0/dsh-whale-effort-slider-1.3.0-glass.zip)**　·　**[怎么装](#3-安装步骤)**
+**[下载默认版](https://github.com/NineHill3690/dsh-whale-effort-slider/raw/main/site/downloads/dsh-whale-effort-slider-1.3.0-default.zip)**　·　**[下载液态玻璃版](https://github.com/NineHill3690/dsh-whale-effort-slider/raw/main/site/downloads/dsh-whale-effort-slider-1.3.0-glass.zip)**　·　**[怎么装](#3-安装步骤)**
 
 <img src="site/img/panel-glass.png" width="840" alt="液态玻璃版浮在聊天输入框上方">
 
