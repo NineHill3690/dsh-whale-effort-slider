@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>鲸鱼推理滑条 · dsh-whale-effort-slider</title>
+<meta name="description" content="DSH 输入框里的推理档位滑条：拖一下换档，海流随档位变急，到 Max 会喷气。提供实色面板与液态玻璃两个版本。">
+<meta property="og:title" content="鲸鱼推理滑条 · dsh-whale-effort-slider">
+<meta property="og:description" content="DSH 输入框里的推理档位滑条。实色面板与液态玻璃两个版本，各取所需。">
+<meta property="og:image" content="img/panel-glass-dark.png">
+<style>
+  :root{
+    --bg:#070a12; --bg2:#0b1020; --panel:#0f1420; --panel2:#131a28;
+    --text:#e9eef8; --dim:#94a1b9; --line:rgba(255,255,255,.09);
+    --brand:#6b8cff; --brand2:#9b6bff; --ok:#3ddc97;
+    --shadow:0 18px 50px rgba(0,0,0,.45);
+  }
+  @media (prefers-color-scheme: light){
+    :root{
+      --bg:#f7f9fd; --bg2:#eef2fa; --panel:#ffffff; --panel2:#f4f7fc;
+      --text:#101725; --dim:#5c6a82; --line:rgba(15,23,42,.10);
+      --shadow:0 18px 44px rgba(50,70,110,.16);
+    }
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font:16px/1.75 -apple-system,"Segoe UI","Microsoft YaHei",system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit}
+  code{font-family:ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;font-size:.92em}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+
+  /* ---------- nav ---------- */
+  nav{position:sticky;top:0;z-index:20;backdrop-filter:blur(14px);
+      background:color-mix(in srgb,var(--bg) 82%,transparent);
+      border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;align-items:center;gap:14px;height:58px}
+  .brand{display:flex;align-items:center;gap:9px;font-weight:650;letter-spacing:.2px}
+  .brand svg{width:23px;height:17px;fill:currentColor;flex:none}
+  .tag{font-size:12px;padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--dim)}
+  nav .spacer{flex:1}
+  nav a.ghost{font-size:14px;color:var(--dim);text-decoration:none;padding:6px 10px;border-radius:9px}
+  nav a.ghost:hover{background:var(--panel2);color:var(--text)}
+
+  /* ---------- hero ---------- */
+  header.hero{padding:72px 0 40px;text-align:center;position:relative;overflow:hidden}
+  header.hero::before{
+    content:"";position:absolute;inset:-30% -10% auto;height:560px;pointer-events:none;
+    background:
+      radial-gradient(560px 320px at 22% 0%,rgba(107,140,255,.28),transparent 70%),
+      radial-gradient(520px 300px at 78% 8%,rgba(155,107,255,.24),transparent 72%);
+    filter:blur(8px);
+  }
+  header.hero>*{position:relative}
+  h1{font-size:clamp(30px,5vw,46px);line-height:1.22;margin:0 0 16px;letter-spacing:-.5px}
+  h1 em{font-style:normal;background:linear-gradient(100deg,var(--brand),var(--brand2));
+       -webkit-background-clip:text;background-clip:text;color:transparent}
+  .lede{max-width:660px;margin:0 auto 30px;color:var(--dim);font-size:17px}
+  .cta{display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
+  .btn{
+    display:inline-flex;flex-direction:column;align-items:flex-start;gap:1px;
+    padding:13px 22px;border-radius:13px;text-decoration:none;font-weight:600;
+    border:1px solid var(--line);background:var(--panel);box-shadow:var(--shadow);
+    transition:transform .16s ease,border-color .16s ease;
+  }
+  .btn small{font-weight:450;font-size:12px;color:var(--dim)}
+  .btn:hover{transform:translateY(-2px);border-color:color-mix(in srgb,var(--brand) 45%,var(--line))}
+  .btn.primary{background:linear-gradient(140deg,var(--brand),var(--brand2));border:0;color:#fff}
+  .btn.primary small{color:rgba(255,255,255,.82)}
+  .meta{margin:20px 0 0;font-size:13px;color:var(--dim)}
+  .hero .shot{margin:44px auto 0;max-width:920px;border-radius:18px;overflow:hidden;
+              box-shadow:var(--shadow);border:1px solid var(--line)}
+  .hero .shot picture{display:block}
+  .hero .shot img{display:block;width:100%;height:auto}
+
+  /* ---------- sections ---------- */
+  section{padding:56px 0}
+  h2{font-size:24px;margin:0 0 8px;letter-spacing:-.2px}
+  .sec-sub{color:var(--dim);margin:0 0 28px;font-size:15px}
+
+  .shots{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .shot-card{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--panel)}
+  .shot-card img{display:block;width:100%;height:auto}
+  .shot-card figcaption{padding:10px 14px;font-size:13px;color:var(--dim);border-top:1px solid var(--line)}
+  .shot-card figcaption b{color:var(--text);font-weight:600}
+
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .card{padding:20px;border:1px solid var(--line);border-radius:14px;background:var(--panel)}
+  .card h3{margin:0 0 6px;font-size:15px}
+  .card p{margin:0;font-size:14px;color:var(--dim)}
+  .card .k{display:block;font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+          color:color-mix(in srgb,var(--brand) 80%,var(--text));margin-bottom:10px}
+
+  table{width:100%;border-collapse:collapse;font-size:14.5px;margin-top:8px}
+  th,td{text-align:left;padding:12px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-weight:600;color:var(--dim);font-size:13px}
+  td:first-child{width:26%;color:var(--dim)}
+  tbody tr:last-child td{border-bottom:0}
+  .tbl{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--panel)}
+
+  ol.steps{counter-reset:s;list-style:none;padding:0;margin:0;display:grid;gap:14px}
+  ol.steps li{counter-increment:s;display:grid;grid-template-columns:30px 1fr;gap:14px;
+              padding:16px 18px;border:1px solid var(--line);border-radius:13px;background:var(--panel)}
+  ol.steps li::before{
+    content:counter(s);width:26px;height:26px;border-radius:50%;display:grid;place-items:center;
+    font-size:13px;font-weight:650;color:#fff;background:linear-gradient(140deg,var(--brand),var(--brand2));
+  }
+  ol.steps b{display:block;margin-bottom:2px}
+  ol.steps span{color:var(--dim);font-size:14px}
+  .path{display:inline-block;margin-top:6px;padding:3px 8px;border-radius:7px;
+        background:var(--panel2);border:1px solid var(--line);font-size:12.5px}
+
+  .notes ul{margin:0;padding-left:20px;color:var(--dim);font-size:14.5px}
+  .notes li{margin-bottom:8px}
+  .notes b{color:var(--text)}
+
+  footer{border-top:1px solid var(--line);padding:28px 0 44px;color:var(--dim);font-size:13px;text-align:center}
+  footer a{color:var(--dim)}
+
+  @media (max-width:860px){
+    .grid{grid-template-columns:1fr 1fr}
+    .shots{grid-template-columns:1fr}
+  }
+  @media (max-width:560px){
+    .grid{grid-template-columns:1fr}
+    header.hero{padding-top:48px}
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <span class="brand">
+      <svg viewBox="-0.6 -0.6 24.7 18.4" aria-hidden="true"><path d="M22.9168 1.43018C22.6713 1.31018 22.5658 1.53918 22.4223 1.65519C22.3733 1.69269 22.3318 1.74169 22.2903 1.78669C21.9317 2.1697 21.5127 2.42121 20.9657 2.39121C20.1657 2.34621 19.4827 2.59771 18.8787 3.20973C18.7502 2.45521 18.3236 2.0047 17.6746 1.71569C17.3351 1.56568 16.9916 1.41518 16.7536 1.08867C16.5876 0.856163 16.5421 0.597155 16.4591 0.341647C16.4061 0.187643 16.3536 0.0301382 16.1761 0.00363739C15.9836 -0.0263635 15.9081 0.135141 15.8326 0.270145C15.5306 0.822162 15.4136 1.43018 15.4251 2.0462C15.4516 3.43174 16.0366 4.53527 17.1991 5.3203C17.3311 5.4103 17.3651 5.5003 17.3236 5.63181C17.2441 5.90231 17.1501 6.16482 17.0671 6.43533C17.0141 6.60784 16.9351 6.64584 16.7501 6.57033C16.1121 6.30383 15.5611 5.90931 15.074 5.4328C14.2475 4.63328 13.5 3.75075 12.568 3.05973C12.349 2.89822 12.13 2.74822 11.9034 2.60522C10.9524 1.68169 12.028 0.923165 12.277 0.833162C12.5375 0.739159 12.3675 0.41615 11.5259 0.42015C10.6844 0.42365 9.91439 0.705658 8.93286 1.08117C8.78935 1.13767 8.63835 1.17867 8.48384 1.21267C7.59332 1.04367 6.66829 1.00617 5.70226 1.11517C3.88321 1.31768 2.43016 2.1777 1.36213 3.64575C0.0790928 5.4103 -0.222916 7.41536 0.146595 9.50642C0.535106 11.7105 1.66014 13.535 3.38869 14.9616C5.18125 16.4406 7.24581 17.1657 9.60138 17.0266C11.0319 16.9441 12.6245 16.7526 14.421 15.2321C14.874 15.4576 15.3496 15.5476 16.1381 15.6151C16.7456 15.6716 17.3306 15.5851 17.7836 15.4911C18.4931 15.3411 18.4441 14.6841 18.1876 14.5636C16.1081 13.595 16.5646 13.9891 16.1496 13.67C17.2061 12.42 18.8202 10.1979 19.3182 7.17235C19.3672 6.83834 19.4297 6.36783 19.4222 6.09732C19.4182 5.93231 19.4562 5.86831 19.6447 5.84931C20.1657 5.78931 20.6712 5.64681 21.1357 5.3913C22.4833 4.65528 23.0268 3.44624 23.1548 1.9972C23.1738 1.77569 23.1508 1.54668 22.9168 1.43018ZM11.1749 14.4736C9.15936 12.889 8.18184 12.3675 7.77832 12.39C7.40081 12.4125 7.46881 12.8445 7.55182 13.126C7.63882 13.404 7.75182 13.5955 7.91033 13.8396C8.01983 14.0011 8.09533 14.2411 7.80083 14.4216C7.15181 14.8231 6.02327 14.2866 5.97027 14.2601C4.65673 13.4865 3.5587 12.4655 2.78467 11.069C2.03715 9.72493 1.60314 8.28289 1.53164 6.74384C1.51264 6.37233 1.62214 6.24082 1.99215 6.17332C2.47916 6.08332 2.98118 6.06432 3.46769 6.13582C5.52476 6.43633 7.27581 7.35586 8.74385 8.8129C9.58188 9.64243 10.2159 10.634 10.8689 11.6025C11.5634 12.631 12.3105 13.611 13.262 14.4146C13.598 14.6961 13.866 14.9101 14.1225 15.0681C13.349 15.1546 12.058 15.1731 11.1749 14.4746L11.1749 14.4736ZM12.141 8.25988C12.141 8.09488 12.273 7.96338 12.439 7.96338C12.4765 7.96338 12.5105 7.97088 12.541 7.98188C12.5825 7.99688 12.6205 8.01938 12.6505 8.05338C12.7035 8.10588 12.7335 8.18088 12.7335 8.25988C12.7335 8.42489 12.6015 8.55639 12.4355 8.55639C12.2695 8.55639 12.141 8.42489 12.141 8.25988ZM15.1415 9.79893C14.949 9.87793 14.7565 9.94544 14.5715 9.95294C14.2845 9.96794 13.9715 9.85143 13.8015 9.70893C13.5375 9.48742 13.3485 9.36342 13.2695 8.97691C13.2355 8.8119 13.2545 8.55639 13.2845 8.40989C13.3525 8.09438 13.277 7.89187 13.0545 7.70787C12.8735 7.55786 12.643 7.51636 12.39 7.51636C12.2955 7.51636 12.209 7.47486 12.1445 7.44136C12.039 7.38886 11.9519 7.25735 12.035 7.09585C12.0615 7.04335 12.19 6.91584 12.22 6.89334C12.5635 6.69784 12.9595 6.76184 13.326 6.90834C13.6655 7.04735 13.9225 7.30236 14.292 7.66287C14.6695 8.09838 14.7375 8.21838 14.9525 8.54539C15.1225 8.8009 15.277 9.06341 15.3831 9.36392C15.4471 9.55142 15.3641 9.70493 15.1415 9.79893Z"/></svg>
+      鲸鱼推理滑条
+    </span>
+    <span class="tag">v1.3.0</span>
+    <span class="spacer"></span>
+    <a class="ghost" href="#compare">两个版本</a>
+    <a class="ghost" href="#install">怎么装</a>
+    <a class="ghost" href="#notes">注意</a>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <h1>推理档位，<em>拖一下</em>就换了</h1>
+    <p class="lede">
+      DSH 输入框里原来那个只显示模型名的按钮，换成一条带鲸鱼的滑条。
+      拖到哪一档就是哪一档，海流的密度和速度跟着变，推到底会喷气。
+      两个下载包只差面板材质：一个实色卡片，一个半透明玻璃，动画一模一样。
+    </p>
+    <div class="cta">
+      <a class="btn primary" href="downloads/dsh-whale-effort-slider-1.3.0-default.zip">
+        下载默认版
+        <small>实色面板 · 无液态玻璃 · 70 KB</small>
+      </a>
+      <a class="btn" href="downloads/dsh-whale-effort-slider-1.3.0-glass.zip">
+        下载液态玻璃版
+        <small>半透明玻璃面板 · 背后有壁纸最好看 · 70 KB</small>
+      </a>
+    </div>
+    <p class="meta">MIT 许可 · 基于 ABING1111/dsh-codex-model-effort-selector v1.1.2 独立演进 · 需要 DSH ≥ 0.2.0-rc.2</p>
+    <div class="shot"><picture>
+      <source media="(prefers-color-scheme: light)" srcset="img/panel-glass.png">
+      <img src="img/panel-glass-dark.png" alt="液态玻璃版浮在聊天输入框上方">
+    </picture></div>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <h2>两个版本，只差一行</h2>
+    <p class="sec-sub">
+      打包脚本把 <code>client.js</code> 里的一行常量翻过来，其余文件逐字节相同。
+      所以两个包不会各走各的：修 bug 同时生效，外观各取所需。
+    </p>
+    <div class="shots">
+      <figure class="shot-card">
+        <img src="img/panel-glass.png" alt="液态玻璃面板（浅色主题）">
+        <figcaption><b>液态玻璃</b> · 浅色主题。面板透出背后的对话，边缘有一圈高光。</figcaption>
+      </figure>
+      <figure class="shot-card">
+        <img src="img/panel-glass-dark.png" alt="液态玻璃面板（深色主题）">
+        <figcaption><b>液态玻璃</b> · 深色主题。同一套配方，换成深色 tint。</figcaption>
+      </figure>
+      <figure class="shot-card">
+        <img src="img/panel-solid.png" alt="实色面板（浅色主题）">
+        <figcaption><b>默认版实色面板</b> · 浅色主题。不透明卡片，没有 backdrop-filter。</figcaption>
+      </figure>
+      <figure class="shot-card">
+        <img src="img/panel-solid-dark.png" alt="实色面板（深色主题）">
+        <figcaption><b>默认版实色面板</b> · 深色主题。底色、描边、投影都跟着主题换。</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<section style="padding-top:8px">
+  <div class="wrap">
+    <h2>它到底做了什么</h2>
+    <p class="sec-sub">都是实装的，不是动效占位。</p>
+    <div class="grid">
+      <div class="card">
+        <span class="k">档位</span>
+        <h3>档位由模型自己给</h3>
+        <p>插件不写死刻度。模型上报几档就画几个刻度点，DeepSeek 常见是 Off / Low / High / Max 四档。</p>
+      </div>
+      <div class="card">
+        <span class="k">拖拽</span>
+        <h3>跟手，不跳格</h3>
+        <p>拖动期间滑条用连续值，指针事件按帧合并；松手才吸附到最近的刻度，吸附值不会反写回滑条。</p>
+      </div>
+      <div class="card">
+        <span class="k">海流</span>
+        <h3>档位越高，水流越急</h3>
+        <p>二十二道水流细丝按档位决定数量和速度；到 Max 会换成 Ultra 材质，多一层极光和水泡。</p>
+      </div>
+      <div class="card">
+        <span class="k">喷气</span>
+        <h3>推到顶会喷一下</h3>
+        <p>第一次到达最高档时，鲸鱼头顶喷出一束水，十一片水滴散开。只在真正到顶时触发，来回蹭不会重复喷。</p>
+      </div>
+      <div class="card">
+        <span class="k">模型</span>
+        <h3>模型列表两级下钻</h3>
+        <p>点模型名进列表，按厂商分组，支持子序列搜索和方向键 / Home / End / Enter，Esc 一层层往回退。</p>
+      </div>
+      <div class="card">
+        <span class="k">主题</span>
+        <h3>深浅色都跟着走</h3>
+        <p>面板底色、描边、投影、文字墨色、滑条水色、鲸鱼填充全部按主题取值，切换主题不用重开面板。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="compare">
+  <div class="wrap">
+    <h2>该装哪个</h2>
+    <p class="sec-sub">两个包同名同席位，只能装一个。想换版本就先卸掉原来的。</p>
+    <div class="tbl">
+      <table>
+        <thead>
+          <tr><th></th><th>默认版（实色）</th><th>液态玻璃版</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>面板</td><td>不透明卡片：主题色底 + 1px 描边 + 柔和投影</td><td>0.19 透明度的 tint + 顶部釉光 + 6px 冻雾 + 四层边缘光</td></tr>
+          <tr><td>GPU</td><td>不需要合成层，老机器和关了硬件加速也稳</td><td>用 backdrop-filter，滚动时合成开销更高</td></tr>
+          <tr><td>可读性</td><td>文字直接压在底色上，最清楚</td><td>背后有花哨壁纸时文字对比会变弱一点</td></tr>
+          <tr><td>适合</td><td>日常用、长时间看、低配机</td><td>喜欢玩外观、桌面有壁纸、能接受一点性能开销</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section id="install">
+  <div class="wrap">
+    <h2>安装</h2>
+    <p class="sec-sub">不用命令行，也不用构建。解压后是个完整插件目录。</p>
+    <ol class="steps">
+      <li><div><b>完全退出 DSH Desktop</b><span>托盘里也要退干净，否则插件目录被占用。</span></div></li>
+      <li><div><b>把解压出来的文件夹放到一个不会被清理的地方</b><span>别放下载目录，系统清缓存时会连插件一起删。</span>
+        <span class="path">例如 D:\plugins\dsh-whale-effort-slider</span></div></li>
+      <li><div><b>打开 DSH Desktop → 设置 → 插件 → 添加插件</b><span>选上面那个文件夹，然后完全退出再重开 DSH。</span></div></li>
+    </ol>
+  </div>
+</section>
+
+<section id="notes">
+  <div class="wrap">
+    <h2>得说清楚的几件事</h2>
+    <div class="notes">
+      <ul>
+        <li><b>它顶掉的是官方模型选择器。</b>插件占用输入框的模型席位并优先显示，所以装上之后输入框里看到的就是这条滑条，不是官方那个按钮。</li>
+        <li><b>和官方选择器别同时开。</b>两个都声明同一个席位时，先声明的会被后者报错顶掉，历史上有过一次装完模型选择器整个消失的事故。</li>
+        <li><b>两个版本不能同时装。</b>包名相同、席位相同，装第二个只会让第一个失效。</li>
+        <li><b>失败不连坐。</b>模型目录拉不下来时只在面板里显示一行错误，输入框和聊天不受影响，也不会留下残留钩子。</li>
+        <li><b>档位名是模型给的。</b>不同厂商上报的 id 不一样（<code>mid</code>、<code>xhigh</code>、<code>ultra</code> 等），插件只做归类和排序，不凭空造档。</li>
+        <li><b>只改了输入框那一个位置。</b>不注入 host hook，不改会话数据，卸载即消失。</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    dsh-whale-effort-slider v1.3.0 · MIT ·
+    前身是 <a href="https://github.com/ABING1111/dsh-codex-model-effort-selector">ABING1111/dsh-codex-model-effort-selector</a> v1.1.2
+  </div>
+</footer>
+
+</body>
+</html>

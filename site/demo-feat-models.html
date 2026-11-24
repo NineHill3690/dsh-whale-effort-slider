@@ -1,0 +1,701 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>demo-feat-models</title>
+<style>
+  html, body { margin: 0; height: 100%; }
+  body {
+    display: grid; place-items: center;
+    background: #e9edf4;
+    font-family: -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+    --dsw-font-family: -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+  }
+  .stage {
+    position: relative; width: 560px; height: 430px;
+    border-radius: 22px; overflow: hidden;
+    transform: translateZ(0);
+    box-shadow: 0 30px 74px rgba(58, 78, 120, .22);
+    --cmes-left: 144px;
+    --cmes-bottom: 70px;
+    background:
+      radial-gradient(900px 520px at 10% -12%, #d7e4ff 0%, transparent 62%),
+      radial-gradient(720px 620px at 90% 10%, #f0d9f8 0%, transparent 66%),
+      radial-gradient(680px 460px at 50% 110%, #cdeeee 0%, transparent 72%),
+      linear-gradient(158deg, #f9fbfe 0%, #eef2fa 46%, #f7f1fb 100%);
+  }
+  .grain {
+    position: absolute; inset: 0; pointer-events: none; opacity: .5;
+    background-image: radial-gradient(rgba(30,50,90,.05) 1px, transparent 1px);
+    background-size: 3px 3px;
+  }
+  .chat {
+    position: absolute; inset: 0 0 210px 0; padding: 34px 46px;
+    color: #3d4a63; font-size: 14px; line-height: 1.85;
+  }
+  .chat .bubble {
+    max-width: 560px; margin-bottom: 14px; padding: 11px 16px;
+    border-radius: 14px; backdrop-filter: none;
+  }
+  .chat .u {
+    margin-left: auto; background: rgba(92, 148, 255, .13);
+    border: 1px solid rgba(92, 148, 255, .26);
+  }
+  .chat .a {
+    background: rgba(255, 255, 255, .78);
+    border: 1px solid rgba(30, 50, 90, .07);
+  }
+  .chat code { font-size: .92em; }
+  .dock { position: absolute; left: 46px; right: 46px; bottom: 30px; }
+  .composer {
+    display: flex; align-items: center; gap: 12px;
+    padding: 13px 16px; border-radius: 17px;
+    background: rgba(255, 255, 255, .74);
+    border: 1px solid rgba(30, 50, 90, .10);
+    box-shadow: 0 12px 30px rgba(58, 78, 120, .13);
+    color: #7d8ca6; font-size: 13px;
+  }
+  .composer .grow { flex: 1; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 10px; border-radius: 999px; font-size: 12px;
+    background: rgba(255, 255, 255, .8);
+    border: 1px solid rgba(30, 50, 90, .12); color: #5b6b85;
+  }
+  .send {
+    width: 26px; height: 26px; border-radius: 8px;
+    background: linear-gradient(140deg, #6b8cff, #8d5bff);
+    opacity: .9;
+  }
+
+  /* the dark twin of the stage: a real dark-theme DSH window has a dark
+     wallpaper too, so the demo must not show dark chrome on a light desk */
+  body[data-ds-dark-theme] { background: #05070d; }
+  body[data-ds-dark-theme] .stage {
+    box-shadow: 0 34px 90px rgba(0, 0, 0, .6);
+    background:
+      radial-gradient(900px 520px at 12% -10%, #1d3f74 0%, transparent 62%),
+      radial-gradient(720px 620px at 88% 12%, #6d2a7c 0%, transparent 66%),
+      radial-gradient(680px 460px at 52% 108%, #0b5c67 0%, transparent 72%),
+      linear-gradient(158deg, #070b16 0%, #0c0f1d 46%, #140a20 100%);
+  }
+  body[data-ds-dark-theme] .grain {
+    background-image: radial-gradient(rgba(255, 255, 255, .05) 1px, transparent 1px);
+  }
+  body[data-ds-dark-theme] .chat { color: #c9d5ea; }
+  body[data-ds-dark-theme] .bubble.u {
+    background: rgba(92, 148, 255, .17); border-color: rgba(126, 172, 255, .22);
+  }
+  body[data-ds-dark-theme] .bubble.a {
+    background: rgba(255, 255, 255, .055); border-color: rgba(255, 255, 255, .085);
+  }
+  body[data-ds-dark-theme] .composer {
+    background: rgba(9, 13, 24, .58); border-color: rgba(158, 190, 255, .17);
+    box-shadow: 0 14px 34px rgba(0, 0, 0, .3); color: #8395b5;
+  }
+  body[data-ds-dark-theme] .pill {
+    background: rgba(255, 255, 255, .06); border-color: rgba(255, 255, 255, .1); color: #a9b8d4;
+  }
+</style>
+<body>
+<div class="stage">
+  <div class="grain"></div>
+
+  <div class="dock">
+    <div class="composer">
+      <span>输入消息…</span>
+      <span class="grow"></span>
+      <div class="cmes-root"><style>
+.cmes-root{position:relative;display:inline-flex;min-width:0;font-family:var(--dsw-font-family);font-size:14px;letter-spacing:0;
+  /* Liquid-glass tokens, copied from the recipe dsh-plugin-wallpaper-engine
+     uses for its floating glass cards (lib/client.glass.js, the iOS-liquid-glass
+     block), with its LIVE knob values read off the running host:
+       alpha    0.19   → --we-glass-alpha  (its 玻璃透明度, 0 = solid, 60 = clear)
+       frost    6px    → --we-blur, with saturate 1.3 / brightness 1.04 /
+                         contrast 1.01 (--we-saturate, --we-glass-brightness)
+       floor    0      → 玻璃保真度 0, i.e. NO readability-floor layer at all
+     That last one is why our earlier .42 slab read as opaque: the reference
+     panes carry a 0.19 tint and nothing else. So:
+       glassTint/glassAlpha  the only body the pane has (an rgb triple + alpha,
+                             so one token pair serves both themes)
+       glassSheenA/B/C       the top-weighted white specular gradient that turns
+                             a flat tint into wet glass
+       glassHighlight        the 1px top refraction line
+       glassHairline         the 0.5px edge hairline
+       glassLift             the soft elevation shadow
+       glassText             a text shadow, which is how text stays readable on
+                             a floor-less pane without adding body back */
+  /* opaque surface for the GLASS=false build (see POPOVER_CSS) */
+  --cmes-panel:#ffffff;
+  --cmes-panelEdge:rgba(15,23,42,.10);
+  --cmes-panelLift:0 12px 32px rgba(15,23,42,.16),0 2px 6px rgba(15,23,42,.06);
+  --cmes-glassTint:255,255,255;
+  --cmes-glassAlpha:.30;
+  --cmes-glassBlur:blur(6px) saturate(1.3) brightness(1.04) contrast(1.01);
+  --cmes-glassSheenA:.16;
+  --cmes-glassSheenB:.05;
+  --cmes-glassSheenC:.02;
+  --cmes-glassHighlight:rgba(255,255,255,.42);
+  --cmes-glassHairline:rgba(255,255,255,.12);
+  --cmes-glassLift:0 12px 40px rgba(15,23,42,.20);
+  --cmes-glassText:0 1px 2px rgba(15,23,42,.40),0 0 14px rgba(15,23,42,.22)}
+.cmes-root *{box-sizing:border-box;corner-shape:round}
+.cmes-root button{font:inherit;cursor:pointer;border:0;background:transparent;color:inherit}
+
+/* ---------- trigger (collapsed seat) ---------- */
+.cmes-trigger{display:inline-flex;align-items:center;gap:5px;max-width:250px;height:28px;padding:0 7px;border-radius:8px;color:var(--dsw-alias-label-caption);font-size:13px!important}
+.cmes-trigger:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}
+.cmes-trigger:disabled{cursor:default;opacity:.55}
+.cmes-trigger:focus-visible{outline:2px solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-offset:2px}
+/* The agent-team mark: the official whale, three times, FILLED ONLY.
+   A filled silhouette has no hairline stroke to smear at 20px, which is what
+   kept the earlier outline version looking blurry. State is carried by COLOUR:
+   white at rest, the host's brand blue once teamwork is on.
+   --dsw-alias-label-primary is near-white on the dark palette and near-black on
+   the light one, so the mark stays legible in both themes; the blue is the
+   host's own brand token rather than an invented hue. */
+.cmes-teamMark{width:20px;height:20px;flex:none;color:var(--cmes-teamOff,var(--dsw-alias-label-primary,#fff))}
+.cmes-teamMark path{fill:currentColor;stroke:none}
+.cmes-tool.active .cmes-teamMark,.cmes-trigger.team .cmes-teamMark{color:var(--cmes-teamOn,var(--dsw-alias-brand-primary-new-color,#4d6bfe))}
+.cmes-iconSmall{width:14px;height:14px;flex:none}
+/* The caption is the ONLY part allowed to shrink: the model name truncates with
+   an ellipsis while the level keeps its (two) characters. They used to share one
+   truncating box, so with a long model name — and with Fast on, which costs
+   another ~21px for the ⚡ — the level slid past the ellipsis and disappeared. */
+.cmes-caption{flex:0 1 auto;display:var(--dsh-composer-model-text-display,inline);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.cmes-triggerEffort{flex:none;display:var(--dsh-composer-model-text-display,inline);white-space:nowrap;color:var(--cmes-ink,#a9d6ff);transition:color .2s ease}
+/* Icon-only seat (the host stamps --dsh-composer-model-icon-display:block on the
+   control row when the composer cannot fit the text; opening either sidebar
+   narrows that row, which is exactly when this state shows up).
+   BUG (fixed in 1.2.29): the glyph inside this span had NO width/height rule.
+   An inline <svg> with only a viewBox sizes itself from the default object size,
+   so as a shrinkable flex child it was squeezed to zero and the seat collapsed
+   to the bare chevron the user saw. The glyph now carries the host's own
+   intrinsic size (16px), which is what dsh's ModelSelect.triggerIcon does. */
+.cmes-compact{display:var(--dsh-composer-model-icon-display,none);flex:none;align-items:center}
+.cmes-compactIcon{display:block;width:16px;height:16px;flex:none;color:var(--dsw-alias-label-secondary)}
+/* 14px / stroke 1: the host chevron's own intrinsic size and weight
+   ("chevron-down-outline" in the shipped icon set, regular weight). */
+.cmes-chev{width:14px;height:14px;flex:none;color:var(--dsw-alias-label-caption);transition:transform .12s ease}
+.cmes-trigger[aria-expanded=true] .cmes-chev{transform:rotate(180deg)}
+
+/* ---------- the Fast tooltip ----------
+   BUG (fixed here): this layer used to be a child of the ⚡ button — i.e. INSIDE
+   the popover — and position:fixed alone could not free it. The popover
+   paints the shipped menu material
+   backdrop-filter: var(--dsw-menu-backdrop-filter) = blur(40px) saturate(150%),
+   and a non-none backdrop-filter makes that element the CONTAINING BLOCK for
+   every fixed/absolute descendant. So the viewport coordinates positionTip
+   computed were re-interpreted against the POPOVER's box (measured in a real
+   browser: a wanted top of 479 landed at 1023 = 544 popover top + 479) and
+   overflow:hidden then clipped the layer away. Hover *did* flip opacity to 1
+   and visibility to visible — nothing was ever painted, which is exactly the
+   "悬停无法显示" symptom.
+   FIX: render the tooltip as a SIBLING of the popover under .cmes-root.
+   That box carries no transform / filter / backdrop-filter, so position:fixed
+   resolves against the viewport again (probe-verified: a fixed box inside the
+   popover reports the popover origin, one inside the root reports 0,0).
+   The tooltip is therefore no longer a descendant of the button, so the old
+   .cmes-fast:hover [role=tooltip] rule could never fire; visibility is a
+   .show class driven by pointer enter/leave + focus/blur instead. */
+.cmes-tip{position:fixed;z-index:1400;padding:7px 12px;white-space:nowrap;background:var(--dsw-specific-menu,var(--dsw-alias-bg-layer-2));box-shadow:var(--dsw-elevation-panel);border-radius:10px;font-size:12px;line-height:17px;text-align:center;color:var(--dsw-alias-label-primary);opacity:0;visibility:hidden;pointer-events:none;transform:translateY(2px);transition:opacity .12s ease,transform .12s ease,visibility 0s .12s}
+.cmes-tip.show{opacity:1;visibility:visible;transform:translateY(0);transition:opacity .12s ease,transform .12s ease,visibility 0s}
+/* the reference tooltip is a two-line card: a heavier title over a muted
+   subtitle. The "visual only" disclosure stays for assistive tech only, so the
+   card keeps the reference's two-line shape. */
+.cmes-tip span{display:block;color:var(--dsw-alias-label-secondary)}
+.cmes-tip .cmes-tipTitle{color:var(--dsw-alias-label-primary);font-size:13px;font-weight:600;line-height:18px}
+
+/* ---------- containing-block probe ----------
+   position:fixed is only viewport-relative while NO ancestor establishes a
+   containing block. The host's composer seat does: it carries
+   will-change:transform, so every fixed descendant is laid out against the
+   SEAT's box. That is why the popover used to be pushed right by the seat's own
+   x offset (280px in the docked composer, far more in a wide window) and ran off
+   the right edge of the window, and why the vertical anchor drifted.
+
+   This probe is a fixed child stretched over its own containing block, so its
+   rect IS the coordinate origin the popover's left/bottom are interpreted
+   against. align() converts viewport coordinates into that space. When no
+   ancestor creates one, the probe equals the viewport and the conversion is the
+   identity — the behaviour stays exactly as it was on hosts that need nothing. */
+.cmes-probe{position:fixed;left:0;top:0;right:0;bottom:0;visibility:hidden;pointer-events:none;z-index:-1}
+
+/* ---------- popover surface (POPOVER_CSS; GLASS picks the build) ---------- */
+
+.cmes-popover{position:fixed;bottom:var(--cmes-bottom,40px);left:var(--cmes-left,12px);width:272px;max-width:calc(100vw - 24px);height:var(--cmes-height,104px);max-height:var(--cmes-avail,calc(100vh - 40px));padding:0;
+  background-color:rgba(var(--cmes-glassTint),var(--cmes-glassAlpha));
+  background-image:linear-gradient(180deg,
+    rgba(255,255,255,var(--cmes-glassSheenA)) 0%,
+    rgba(255,255,255,var(--cmes-glassSheenB)) 38%,
+    rgba(255,255,255,var(--cmes-glassSheenC)) 100%);
+  border:0;
+  border-radius:16px;
+  box-shadow:
+    inset 0 1px 0 var(--cmes-glassHighlight),
+    inset 0 -1px 0 rgba(255,255,255,.08),
+    inset 0 0 0 .5px var(--cmes-glassHairline),
+    var(--cmes-glassLift);
+  backdrop-filter:var(--cmes-glassBlur);
+  -webkit-backdrop-filter:var(--cmes-glassBlur);
+  z-index:1100;overflow:hidden;transform-origin:bottom left;transition:opacity .18s ease,transform .18s ease,height .2s cubic-bezier(.2,.8,.2,1),visibility 0s}
+.cmes-popover.closed{opacity:0;pointer-events:none;visibility:hidden;transform:translateY(5px) scale(.98);transition-delay:0s,0s,0s,.18s}
+.cmes-popover.peak{--cmes-glassHighlight:rgba(178,138,255,.60);--cmes-glassHairline:rgba(178,138,255,.34)}
+
+
+
+/* ---------- panes ---------- */
+.cmes-pane{position:absolute;left:0;right:0;bottom:0;opacity:1;transform:translateY(0);transition:opacity .14s ease,transform .2s ease,visibility 0s}
+.cmes-pane.hidden{opacity:0;pointer-events:none;visibility:hidden;transform:translateY(5px);transition-delay:0s,0s,.14s}
+
+/* ---------- effort pane ---------- */
+.cmes-main{height:104px}
+.cmes-tool{position:absolute;top:7px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;padding:0;border-radius:8px;color:var(--dsw-alias-label-caption)}
+.cmes-tool:hover{background:var(--dsw-alias-interactive-bg-hover)}
+.cmes-fast{left:7px}
+.cmes-reset{right:7px}
+.cmes-tool svg{width:16px;height:16px}
+/* the team mark uses the whole 28px hit area: the whales are filled silhouettes,
+   and every extra pixel is what keeps them legible without a hairline stroke */
+.cmes-tool .cmes-teamMark{width:24px;height:24px}
+.cmes-fast.active{color:var(--cmes-accent,#3988f6)}
+.cmes-popover.peak .cmes-fast.active{color:var(--cmes-accentPeak,#9b48eb)}
+.cmes-modelLink{position:absolute;left:43px;right:43px;top:8px;height:42px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2px 4px;border-radius:5px;transition:opacity .2s ease}
+.cmes-modelLink:hover{background:var(--dsw-alias-interactive-bg-hover)}
+.cmes-heading{display:flex;gap:3px;justify-content:center;align-items:center;max-width:100%;height:20px;color:var(--cmes-ink,#a9d6ff);font-size:14px;line-height:20px;white-space:nowrap;text-shadow:var(--cmes-glassText);transition:color .2s ease}
+.cmes-heading svg{width:10px;height:10px;color:var(--dsw-alias-label-caption)}
+.cmes-modelName{display:block;max-width:100%;height:18px;color:var(--dsw-alias-label-secondary);font-size:12px;line-height:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cmes-modelLink .cmes-modelName{text-shadow:var(--cmes-glassText)}
+.cmes-warning{position:absolute;left:29px;right:29px;top:20px;text-align:center;line-height:18px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s ease}
+/* The quota warning wears a DEEP BLUE (v1.2.27), the same family as the Max
+   level word under it: solid ink instead of the old violet shimmer, so the line
+   reads as a proper colour on the card rather than a light band sweeping
+   through transparent text. Ink comes from --cmes-warnInk, stamped inline from
+   the ladder's top rung; the light card therefore gets the Max word's own navy
+   and the dark card the legible lift of that hue (a navy would sink into
+   #2a2b2e). */
+.cmes-warning span{display:inline-block;color:var(--cmes-warnInk,#113a6e);-webkit-text-fill-color:currentColor}
+.cmes-popover.message .cmes-modelLink,.cmes-popover.message .cmes-tool{opacity:0;pointer-events:none}
+.cmes-popover.message .cmes-warning{opacity:1}
+
+/* ---------- rail: the power slider ----------
+   Anatomy and timings are ported from dsh-codex-excellent-slider's power
+   slider, re-prefixed and re-scaled to this popover:
+     track 22px -> fill (blue -> violet -> deep, keyed to the knob's ratio)
+     -> energy star dust (22 stars; opacity and count rise with the energy)
+     -> Ultra material + 4-layer aurora (top tier only)
+     -> one-shot blowhole spout out of the knob on arrival at that tier
+     -> 25px knob whose centre rides [11px, width - 11px].
+   Only the geometry differs from the reference: this rail spans the popover's
+   12px insets, so the knob travels over calc(100% - 22px) inside a 22px track.
+   The track stays tinted toward the current level (railBase/trackFor); the fill
+   gradient is stamped inline and follows the live ratio, not just the stop.
+   v1.2.11: the fill's front cap is SQUARE and it runs KNOB_FLOW_REACH past the
+   knob's centre, so the flow frontier is a straight line sitting on the whale's
+   whale's optical centre instead of a pill tip that the fluke hides — see the constant for
+   the arithmetic. */
+.cmes-rail{position:absolute;left:12px;right:12px;top:67px;height:22px;border-radius:999px;background:var(--cmes-track,#e8e7e8);box-shadow:inset 0 1px 0 rgba(255,255,255,.05);touch-action:none;cursor:pointer;transition:background .25s ease}
+/* GRAB AREA — the knob is 25px tall on a 22px track, so the puck overhangs and
+   that overhang would be a dead zone. This transparent pad widens the rail's
+   OWN hit box over it (plus 6px each side); the knob stays pointer-events:none,
+   so the event TARGET never changes while the value slides under the cursor —
+   one stable target for the whole gesture, which is what keeps a drag from
+   being interrupted part-way. */
+.cmes-rail::before{content:"";position:absolute;inset:-8px -6px;border-radius:999px}
+.cmes-rail:focus-visible{outline:2px solid var(--dsw-focus-ring-color,#3989e9);outline-offset:2px}
+.cmes-fill{position:absolute;left:0;top:0;bottom:0;width:calc(13px + (100% - 22px)*var(--cmes-pos,0));border-radius:11px 0 0 11px;overflow:hidden;pointer-events:none;background:var(--cmes-fillBg,var(--cmes-fill,#6fb2e4));transition:width .18s cubic-bezier(.2,.9,.25,1),background .24s ease}
+body[data-ds-dark-theme] .cmes-fill{background:var(--cmes-fillBgDark,var(--cmes-fill,#79bcdf))}
+/* the knob and the fill stop animating while the pointer owns the value */
+.cmes-rail.dragging .cmes-fill{transition:none}
+
+/* ---------- Ultra material (top tier only) ----------
+   A 2x-wide gradient swept into place, then a soft haze that breathes. The
+   sweep is what sells "this tier is different": the material slides across the
+   fill once and parks at its stop instead of looping.
+   v1.2.20: these durations and delays are the authored ones and stay put. The
+   teamwork boost no longer re-times them (v1.2.19 did, by multiplying them with
+   a --cmes-flow variable); applyFlowRate hands the running animations a
+   playbackRate of 2 instead, so sweep, haze and the four aurora veils simply
+   run twice as fast with their phases intact. */
+.cmes-ultra{position:absolute;inset:0;overflow:hidden;border-radius:inherit;pointer-events:none;--cmes-sweep:1.8s;--cmes-hazeAlpha:.065;background-image:radial-gradient(ellipse at 54% 28%,rgba(226,246,255,.11),rgba(168,214,244,.035) 38%,rgba(168,214,244,0) 72%),linear-gradient(90deg,rgba(255,255,255,.08) 0%,rgba(190,230,255,.05) 25%,rgba(126,186,232,.06) 50%,rgba(22,62,112,.11) 60%,rgba(12,42,82,.14) 68%,rgba(6,30,64,.16) 74%,rgba(12,42,82,.14) 79%,rgba(22,62,112,.11) 88%,rgba(6,26,54,.17) 100%);mix-blend-mode:soft-light;background-size:100% 100%,200% 100%;background-repeat:no-repeat;background-position:0 0,0% 0%;animation:cmes-ultra-sweep var(--cmes-sweep) linear both,cmes-ultra-in .2s ease-out both}
+@keyframes cmes-ultra-in{from{opacity:0}to{opacity:1}}
+@keyframes cmes-ultra-sweep{
+  0%{background-position:0 0,67% 0%;animation-timing-function:cubic-bezier(.30,.70,.35,1)}
+  12%{background-position:0 0,80% 0%;animation-timing-function:cubic-bezier(.28,.06,.30,1)}
+  100%{background-position:0 0,100% 0%}
+}
+body:not([data-ds-dark-theme]) .cmes-ultra{--cmes-hazeAlpha:.035}
+.cmes-ultraHaze{position:absolute;inset:0;pointer-events:none;border-radius:inherit;background:radial-gradient(ellipse at 61% 58%,rgba(226,246,255,var(--cmes-hazeAlpha)) 0%,rgba(168,214,244,.022) 34%,rgba(168,214,244,0) 72%);animation:cmes-haze-breathe 13.6s ease-in-out infinite;animation-delay:-4.2s}
+@keyframes cmes-haze-breathe{0%,100%{opacity:.55}50%{opacity:.9}}
+
+/* ---------- aurora: four drifting veils over the Ultra material ----------
+   Each veil is twice the fill's width and slides with its own duration and
+   direction, so the composite never visibly repeats. Delays are negative so
+   the veils are already mid-cycle when the tier arrives — there is no "startup"
+   moment to catch.
+   v1.2.20: the durations below are the numbers the replica was tuned with and
+   are not touched; agent teamwork doubles them through playbackRate
+   (applyFlowRate), which keeps each veil's phase ratio across the flip. */
+.cmes-aurora{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:1}
+.cmes-aurora>i{position:absolute;top:-30%;bottom:-30%;left:-50%;width:200%;display:block;background-repeat:no-repeat;opacity:0;animation-name:cmes-aurora-in;animation-duration:.9s;animation-timing-function:ease-out;animation-fill-mode:both}
+.cmes-aurora>.a1{background-image:radial-gradient(7% 170% at 50% 45%,rgba(226,246,255,.40) 0%,rgba(226,246,255,.15) 46%,rgba(226,246,255,0) 76%);animation-name:cmes-aurora-in,cmes-aurora-x1,cmes-aurora-breathe;animation-duration:.9s,8.5s,4.5s;animation-delay:2.4s,.7s,3.3s;animation-iteration-count:1,infinite,infinite;animation-direction:normal,alternate,alternate;animation-timing-function:ease-out,ease-in-out,ease-in-out;animation-fill-mode:both,both,none}
+.cmes-aurora>.a2{background-image:radial-gradient(10% 180% at 50% 55%,rgba(96,168,222,.38) 0%,rgba(96,168,222,.14) 50%,rgba(96,168,222,0) 78%);animation-name:cmes-aurora-in,cmes-aurora-x2;animation-duration:.9s,13s;animation-delay:2.6s,-1.5s;animation-iteration-count:1,infinite;animation-direction:normal,alternate;animation-timing-function:ease-out,linear;animation-fill-mode:both,both}
+.cmes-aurora>.a3{background-image:radial-gradient(5% 160% at 50% 50%,rgba(168,214,244,.30) 0%,rgba(168,214,244,.11) 52%,rgba(168,214,244,0) 80%);animation-name:cmes-aurora-in,cmes-aurora-x3;animation-duration:.9s,16s;animation-delay:2.8s,-5.5s;animation-iteration-count:1,infinite;animation-direction:normal,alternate;animation-timing-function:ease-out,linear;animation-fill-mode:both,both}
+.cmes-aurora>.a4{background-image:radial-gradient(8% 140% at 50% 60%,rgba(40,96,158,.30) 0%,rgba(40,96,158,.11) 55%,rgba(40,96,158,0) 82%);animation-name:cmes-aurora-in,cmes-aurora-x4;animation-duration:.9s,23s;animation-delay:3s,-10.7s;animation-iteration-count:1,infinite;animation-direction:normal,alternate;animation-timing-function:ease-out,linear;animation-fill-mode:both,both}
+@keyframes cmes-aurora-in{from{opacity:0}to{opacity:1}}
+@keyframes cmes-aurora-breathe{from{opacity:1}to{opacity:.72}}
+@keyframes cmes-aurora-x1{from{transform:translate3d(-16%,1.4px,0)}to{transform:translate3d(16%,-1.4px,0)}}
+@keyframes cmes-aurora-x2{from{transform:translate3d(14%,-1.6px,0)}to{transform:translate3d(-14%,1.6px,0)}}
+@keyframes cmes-aurora-x3{from{transform:translate3d(-10%,1.8px,0)}to{transform:translate3d(10%,-1.8px,0)}}
+@keyframes cmes-aurora-x4{from{transform:translate3d(8%,-1px,0)}to{transform:translate3d(-8%,1px,0)}}
+
+/* ---------- water flow (replaces the star dust) ----------
+   No dots, no glow. Each particle is a thin horizontal filament with both ends
+   faded out, so it reads as water sliding past rather than as a spark. Three
+   things carry the motion: the filament's own bob (drop-bob), the lane's
+   right-to-left sweep, and the two water layers under it.
+
+   Determinism is unchanged: heights, lengths and lifetimes all come from
+   starHash(index, salt), so a re-render never reshuffles a flow in flight.
+   The lane carries NO opacity ramp any more - the filament fades at its own
+   ends, and a lane-level fade made whole frames of the bar go empty (measured). */
+.cmes-water{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:2}
+.cmes-flow{position:absolute;left:0;right:0;height:1.3px;margin-top:-.65px;pointer-events:none;animation-name:cmes-flow-sweep;animation-timing-function:linear;animation-iteration-count:infinite}
+.cmes-flow>i{position:absolute;left:100%;top:0;border-radius:999px;
+  animation-name:cmes-flow-bob;animation-timing-function:ease-in-out;animation-iteration-count:infinite;animation-direction:alternate}
+/* Filament: five-stop gradient so both ends dissolve, a brighter cap along the top
+   and a deep-teal shadow along the bottom. Height scales with --ds, so near lanes
+   are visibly thicker than far ones. */
+.cmes-flow>i.cmes-fil{width:var(--cmes-fw,44px);height:calc(1.3px * var(--cmes-ds,1));margin-top:calc(-0.65px * var(--cmes-ds,1));
+  background:linear-gradient(90deg,rgba(255,255,255,0) 0%,rgba(240,251,255,.30) 22%,rgba(255,255,255,.62) 55%,rgba(240,251,255,.34) 78%,rgba(255,255,255,0) 100%);
+  filter:blur(.25px)}
+.cmes-flow>i.cmes-fil::after{content:"";position:absolute;left:12%;right:12%;top:-.4px;height:.7px;border-radius:999px;
+  background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.85) 45%,rgba(255,255,255,.35) 72%,rgba(255,255,255,0));filter:blur(.18px)}
+.cmes-flow>i.cmes-fil::before{content:"";position:absolute;left:10%;right:10%;bottom:-.45px;height:.9px;border-radius:999px;
+  background:linear-gradient(90deg,rgba(13,74,105,0),rgba(11,66,96,.34) 44%,rgba(13,74,105,0));filter:blur(.35px)}
+/* Wisp: a shorter, fainter dash threaded between the filaments so the lanes never
+   read as parallel scratches. Its own element, not a modifier on the filament. */
+.cmes-flow>i.cmes-wisp{width:var(--cmes-wl,22px);height:1.1px;margin-top:-.55px;opacity:.4;
+  background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.30) 40%,rgba(255,255,255,.44) 68%,rgba(255,255,255,0));
+  filter:blur(.4px)}
+@keyframes cmes-flow-sweep{from{transform:translate3d(0,0,0)}to{transform:translate3d(-100%,0,0)}}
+@keyframes cmes-flow-bob{from{transform:translateY(-1.2px) scaleY(.86)}to{transform:translateY(1.2px) scaleY(1.1)}}
+
+/* Max tier: a few bubbles ride the same lanes. */
+.cmes-bubble{position:absolute;left:100%;top:50%;width:2.6px;height:2.6px;margin:-1.3px 0 0 -1.3px;border-radius:50%;
+  background:rgba(255,255,255,.9);box-shadow:0 0 3px rgba(255,255,255,.42);opacity:0;
+  animation-name:cmes-bubble-rise;animation-timing-function:ease-out;animation-iteration-count:infinite}
+@keyframes cmes-bubble-rise{
+  0%{transform:translate(0,3px) scale(.45);opacity:0}
+  18%{opacity:.72}
+  70%{opacity:.55}
+  100%{transform:translate(-7px,-5px) scale(1.05);opacity:0}
+}
+
+/* ---------- water body texture ----------
+   Two translucent layers under the particles: a fine diagonal grain that never
+   stops drifting, and a long swell that makes the whole column breathe. They
+   are what turn a flat gradient into "a tube full of water". */
+.cmes-tex{position:absolute;inset:-30% -10%;pointer-events:none;z-index:1;mix-blend-mode:soft-light;opacity:.85;
+  background-image:repeating-linear-gradient(99deg,rgba(255,255,255,0) 0 5px,rgba(255,255,255,.10) 5px 7px,rgba(255,255,255,0) 7px 15px);
+  animation:cmes-tex-drift 5.2s linear infinite}
+@keyframes cmes-tex-drift{from{transform:translate3d(0,0,0)}to{transform:translate3d(-15px,0,0)}}
+.cmes-swell{position:absolute;inset:-45% -25%;pointer-events:none;z-index:1;mix-blend-mode:soft-light;opacity:.75;
+  background:repeating-linear-gradient(95deg,rgba(255,255,255,0) 0 54px,rgba(255,255,255,.10) 54px 76px,rgba(255,255,255,0) 76px 148px);
+  animation:cmes-swell-drift 3.6s linear infinite}
+@keyframes cmes-swell-drift{from{transform:translate3d(0,0,0)}to{transform:translate3d(-148px,0,0)}}
+
+/* ---------- teamwork pod ----------
+   Two smaller whales trail the knob whenever agent teamwork is on. They live
+   INSIDE the knob, so they follow it for free: no second position calculation,
+   no drift between the puck and its wake.
+   Sizes are keyed to the rail: podBig is exactly RAIL_H tall, podMid is two
+   thirds of it. They are pushed 12px past the knob's left edge because the
+   whale glyph already overhangs it by about 8px - at 12 they never overlap it.
+   The podfade variable fades the pod out when the knob is parked at the far
+   left, so the wake cannot poke out of the card. */
+.cmes-pod{position:absolute;top:50%;right:calc(100% + 12px);display:flex;align-items:center;gap:3px;
+  transform:translateY(-50%);opacity:0;pointer-events:none;transition:opacity .3s ease}
+.cmes-rail.team .cmes-pod{opacity:var(--cmes-podfade,1)}
+.cmes-podw{display:block;overflow:visible;color:#fff;filter:drop-shadow(0 1px 1.2px rgba(9,42,68,.24))}
+.cmes-podBase{fill:currentColor;stroke:rgba(7,48,74,.34);stroke-width:.6;paint-order:stroke}
+.cmes-podw.podBig{width:30.2px;height:22px;opacity:.94;animation:cmes-pod-bob 1.7s linear infinite alternate;animation-delay:-.5s}
+.cmes-podw.podMid{width:20.1px;height:14.7px;opacity:.8;animation:cmes-pod-bob 2.2s linear infinite alternate;animation-delay:-1.35s}
+@keyframes cmes-pod-bob{from{transform:translate(-1.7px,-1.6px) rotate(-2.6deg)}to{transform:translate(1.7px,1.6px) rotate(2.6deg)}}
+
+/* ---------- blowhole spout ----------
+   ONE-SHOT. On arrival at the top tier the whale blows: the column punches out
+   of the blowhole, mushrooms into a crown, and a few droplets fall back. It is
+   what makes the arrival read as breath rather than as a colour change, and it
+   never loops.
+
+   The jet grows UP out of its own bottom edge (transform-origin 50% 100%, plus
+   a -100% Y translate that parks that edge exactly on the blowhole), so one
+   element already gives the "shot out of the hole" feel without scaling the
+   whole container. The crown, mist and droplets are separate layers purely so
+   they can lag the column.
+
+   v1.2.22 - RICHER, NOT LOUDER. The same single breath, but the air around it
+   now behaves like air instead of like one decal: a light halo blooms at the
+   hole, a flat shock ring pushes out across the water film, the blown-off
+   moisture washes sideways along the whale's back, three thin filaments lead
+   the column and curl off at different angles, the crown breaks into a second
+   smaller chuff a beat later, two glints catch the light in the spray, one
+   heavy droplet falls back ONTO the whale, and the drops themselves are
+   elongated along their own flight line instead of staying round. Every layer
+   is staggered in [40ms, 240ms] behind the column, so it still reads as ONE
+   gesture - adding mass, not events. Nothing loops; prefers-reduced-motion
+   still removes the whole layer. */
+.cmes-spout{position:absolute;top:50%;width:0;height:0;overflow:visible;pointer-events:none;z-index:2}
+.cmes-jet{position:absolute;left:var(--shx);top:var(--shy);width:calc(var(--jw) * 1px * var(--s));height:calc(var(--jh) * 1px * var(--s));clip-path:polygon(40% 100%,60% 100%,100% 6%,80% 0,20% 0,0 6%);-webkit-mask-image:linear-gradient(180deg,transparent 0,#000 34%,#000 100%);mask-image:linear-gradient(180deg,transparent 0,#000 34%,#000 100%);background:linear-gradient(180deg,rgba(255,255,255,.1) 0%,rgba(248,254,255,.9) 34%,rgba(232,250,255,.78) 62%,rgba(226,247,255,.32) 100%);filter:blur(calc(.65px * var(--s)));transform-origin:50% 100%;opacity:0;animation:cmes-jet-rise var(--dur) cubic-bezier(.16,.62,.24,1) var(--jd,var(--delay)) 1 both}
+/* v1.2.22 BUGFIX: --jw/--jh are unitless numbers, so the old
+   calc(var(--jw) * var(--s)) was a NUMBER * NUMBER and CSS dropped the
+   declaration - the three cones were always 0x0 and therefore never painted.
+   The column people actually saw came from .plume alone. Multiplying by 1px
+   turns the authored 46-space sizes into real lengths, so the jet exists now
+   and the numbers below finally mean what they say. */
+/* Three cones, not one: a single geometric funnel reads as a light beam. The
+   wide one lags (the column thickens as it climbs), the thin one leads and
+   leans longest — together their edges are irregular enough to read as spray. */
+.cmes-jet.j1{--jw:20;--jh:38;--ja:1}
+.cmes-jet.j2{--jw:32;--jh:27;--ja:.4;--jd:calc(var(--delay) + 45ms);background:radial-gradient(72% 84% at 50% 76%,rgba(226,247,255,.5),rgba(226,247,255,0) 78%)}
+.cmes-jet.j3{--jw:9;--jh:32;--ja:.3;--jd:calc(var(--delay) + 85ms)}
+.cmes-plume{position:absolute;left:var(--shx);top:calc(var(--shy) - 2px * var(--s));width:calc(34px * var(--s));height:calc(42px * var(--s));border-radius:50% 50% 44% 44%/40% 40% 60% 60%;background:radial-gradient(58% 52% at 50% 34%,rgba(233,249,255,.62),rgba(206,240,255,.24) 62%,rgba(206,240,255,0) 84%);filter:blur(calc(2.2px * var(--s)));transform-origin:50% 100%;opacity:0;animation:cmes-plume-rise var(--dur) ease-out var(--delay) 1 both}
+.cmes-crown{position:absolute;left:var(--shx);top:calc(var(--shy) - 34px * var(--s));width:calc(34px * var(--s));height:calc(14px * var(--s));border-radius:50%;background:radial-gradient(46% 50% at 50% 46%,rgba(255,255,255,.94),rgba(232,250,255,.6) 42%,rgba(214,242,255,.24) 68%,rgba(214,242,255,0) 88%);filter:blur(calc(.55px * var(--s)));box-shadow:0 0 calc(8px * var(--s)) rgba(196,235,255,.5);opacity:0;animation:cmes-crown-pop var(--dur) ease-out var(--delay) 1 both}
+.cmes-mist{position:absolute;left:var(--shx);top:calc(var(--shy) - 27px * var(--s));width:calc(9px * var(--s));height:calc(4px * var(--s));border-radius:50%;background:radial-gradient(50% 50% at 50% 50%,rgba(233,249,255,.7),rgba(233,249,255,0) 72%);filter:blur(calc(.8px * var(--s)));opacity:0;animation:cmes-mist-drift var(--dur) ease-out var(--delay) 1 both}
+.cmes-mist.m1{--mx:calc(-10px * var(--s))}
+.cmes-mist.m2{--mx:calc(9px * var(--s));animation-delay:calc(var(--delay) + 60ms)}
+.cmes-drop{position:absolute;left:var(--shx);top:var(--shy);width:0;height:0;opacity:0;animation:cmes-drop-fly var(--dur) cubic-bezier(.18,.6,.32,1) var(--delay) 1 both}
+/* the drop is an ellipsoid now, not a ball: --tilt turns it onto its own flight
+   line and --stretch lengthens it along that line, so a fast big droplet reads
+   as a droplet instead of as a dot. Both are per-drop numbers baked in JS. */
+.cmes-drop::before{content:"";position:absolute;left:0;top:0;width:var(--size);height:var(--size);border-radius:50%;background:var(--tone);box-shadow:0 0 calc(1.6px * var(--s)) rgba(190,232,255,.4);transform:translate(-50%,-50%) rotate(var(--tilt,0deg)) scaleY(var(--stretch,1))}
+.cmes-burble{position:absolute;left:var(--shx);top:var(--shy);width:calc(2.6px * var(--s));height:calc(2.6px * var(--s));margin:calc(-1.3px * var(--s)) 0 0 calc(-1.3px * var(--s));border-radius:50%;background:rgba(255,255,255,.92);opacity:0;animation:cmes-burble-pop var(--dur) ease-out var(--delay) 1 both}
+.cmes-burble.b2{left:calc(var(--shx) + 2.4px * var(--s));animation-delay:calc(var(--delay) + 45ms)}
+/* HALO: the light the breath spills onto the water film around the hole. Sits
+   BEHIND everything (first child), so it only ever lifts the background. */
+.cmes-halo{position:absolute;left:var(--shx);top:var(--shy);width:calc(24px * var(--s));height:calc(16px * var(--s));border-radius:50%;background:radial-gradient(50% 50% at 50% 50%,rgba(255,255,255,.85),rgba(214,242,255,.42) 46%,rgba(206,238,255,0) 78%);filter:blur(calc(1.5px * var(--s)));opacity:0;animation:cmes-halo-pulse var(--dur) ease-out var(--delay) 1 both}
+/* SHOCK: a flat ring, not a circle - the rail is a horizontal surface seen at a
+   shallow angle, so its ripples are ellipses. A border keeps the edge crisp at
+   the small size where a radial-gradient ring turns to mush. */
+.cmes-shock{position:absolute;left:var(--shx);top:var(--shy);width:calc(18px * var(--s));height:calc(8px * var(--s));border-radius:50%;border:calc(.9px * var(--s)) solid rgba(238,251,255,.9);box-shadow:0 0 calc(4px * var(--s)) rgba(190,232,255,.55);opacity:0;animation:cmes-shock-ring var(--dur) cubic-bezier(.2,.7,.3,1) calc(var(--delay) + 14ms) 1 both}
+/* BACKWASH: the moisture the jet throws off does not vanish sideways in mid
+   air, it washes across the animal's back. Flattened + blurred so it hugs the
+   rail plane instead of floating. */
+.cmes-bwash{position:absolute;left:var(--shx);top:calc(var(--shy) + 1px * var(--s));width:calc(30px * var(--s));height:calc(8px * var(--s));border-radius:50%;background:radial-gradient(50% 50% at 50% 50%,rgba(236,250,255,0) 32%,rgba(236,250,255,.5) 58%,rgba(214,242,255,0) 84%);filter:blur(calc(.9px * var(--s)));opacity:0;animation:cmes-bwash-spread var(--dur) ease-out calc(var(--delay) + 6ms) 1 both}
+/* THREADS: three hair-thin leading filaments. They are what makes the jet read
+   as JETTED water rather than as a cone of light: each one leaves at a slightly
+   different angle and drifts further off-axis the longer it lives, so the
+   column's silhouette breaks up at the edges. --th is height in 46-space. */
+.cmes-thread{position:absolute;left:var(--shx);top:var(--shy);width:calc(1.1px * var(--s));height:calc(var(--th) * 1px * var(--s));border-radius:calc(1px * var(--s));background:linear-gradient(180deg,rgba(255,255,255,0) 0%,rgba(248,254,255,.62) 30%,rgba(226,247,255,.38) 74%,rgba(226,247,255,0) 100%);filter:blur(calc(.6px * var(--s)));transform-origin:50% 100%;opacity:0;animation:cmes-thread-rise calc(var(--dur) - 96ms) cubic-bezier(.18,.62,.28,1) var(--td,var(--delay)) 1 both}
+.cmes-thread.t1{--th:26;--tx:calc(-7px * var(--s));--ty:calc(-30px * var(--s));--td:calc(var(--delay) + 40ms)}
+.cmes-thread.t2{--th:31;--tx:calc(9px * var(--s));--ty:calc(-34px * var(--s));--td:calc(var(--delay) + 70ms)}
+.cmes-thread.t3{--th:23;--tx:calc(2px * var(--s));--ty:calc(-41px * var(--s));--td:calc(var(--delay) + 96ms)}
+/* CHUFF: the crown does not simply fade - it breaks into one smaller ring a
+   beat later, which is how a real blow ends. Own duration minus its delay, so
+   it still lands inside SPOUT_DURATION. */
+.cmes-puff{position:absolute;left:var(--shx);top:calc(var(--shy) - 32px * var(--s));width:calc(26px * var(--s));height:calc(9px * var(--s));border-radius:50%;background:radial-gradient(50% 50% at 50% 50%,rgba(255,255,255,0) 44%,rgba(240,252,255,.66) 58%,rgba(214,242,255,.26) 70%,rgba(214,242,255,0) 86%);filter:blur(calc(.5px * var(--s)));opacity:0;animation:cmes-puff-chuff calc(var(--dur) - 240ms) ease-out calc(var(--delay) + 240ms) 1 both}
+/* v1.2.22 FAN: the two lobes that turn the silhouette from a light beam into a
+   fountain. A real blow spreads sideways once it clears the hole; without them
+   everything sat inside one narrow funnel. Each lobe is a half-mist that swells
+   outward and drops as it fades, and they leave at slightly different times so
+   the umbrella is asymmetric. */
+.cmes-fan{position:absolute;left:var(--shx);top:calc(var(--shy) - 30px * var(--s));width:calc(20px * var(--s));height:calc(11px * var(--s));border-radius:50% 50% 44% 44%/56% 56% 44% 44%;background:radial-gradient(58% 60% at 50% 62%,rgba(244,253,255,.5),rgba(214,242,255,.22) 58%,rgba(214,242,255,0) 82%);filter:blur(calc(1.5px * var(--s)));transform-origin:50% 100%;opacity:0;animation:cmes-fan-bloom calc(var(--dur) - 60ms) cubic-bezier(.2,.58,.3,1) var(--fd,var(--delay)) 1 both}
+.cmes-fan.l{--fx:calc(-1 * 1px);--fd:calc(var(--delay) + 60ms)}
+.cmes-fan.r{--fx:1px;--fd:calc(var(--delay) + 110ms)}
+/* GLINTS: the 4-point catch-light inside the spray. clip-path star, no image,
+   no blur cost beyond one drop-shadow; a rotation makes them sparkle rather
+   than pulse. */
+.cmes-glint{position:absolute;left:var(--shx);top:var(--shy);width:calc(2.4px * var(--s));height:calc(2.4px * var(--s));background:#fff;clip-path:polygon(50% 0,58% 42%,100% 50%,58% 58%,50% 100%,42% 58%,0 50%,42% 42%);filter:drop-shadow(0 0 calc(1.2px * var(--s)) rgba(206,240,255,.8));opacity:0;animation:cmes-glint-twinkle calc(var(--dur) - 100ms) ease-out var(--gd,var(--delay)) 1 both}
+.cmes-glint.g1{--gx:calc(-8px * var(--s));--gy:calc(-26px * var(--s));--gd:calc(var(--delay) + 100ms)}
+.cmes-glint.g2{--gx:calc(10px * var(--s));--gy:calc(-20px * var(--s));--gd:calc(var(--delay) + 150ms);width:calc(2.2px * var(--s));height:calc(2.2px * var(--s))}
+.cmes-glint.g3{--gx:calc(1px * var(--s));--gy:calc(-38px * var(--s));--gd:calc(var(--delay) + 200ms);width:calc(2.6px * var(--s));height:calc(2.6px * var(--s))}
+/* DRIP: the one heavy droplet the crown cannot hold. It falls back down onto
+   the whale's back instead of outward, which is the note that makes the burst
+   feel gravity-bound rather than firework-like. */
+.cmes-drip{position:absolute;left:calc(var(--shx) + 1px * var(--s));top:calc(var(--shy) - 31px * var(--s));width:calc(1.9px * var(--s));height:calc(2.6px * var(--s));border-radius:50% 50% 50% 50%/60% 60% 42% 42%;background:rgba(243,253,255,.95);box-shadow:0 0 calc(1.4px * var(--s)) rgba(190,232,255,.5);opacity:0;animation:cmes-drip-fall calc(var(--dur) - 300ms) cubic-bezier(.4,0,.8,.62) calc(var(--delay) + 300ms) 1 both}
+@keyframes cmes-jet-rise{0%{opacity:calc(0 * var(--ja,1));transform:translate(-50%,-100%) scaleY(.05)}22%{opacity:calc(.95 * var(--ja,1));transform:translate(-50%,-100%) scaleY(1)}46%{opacity:calc(.72 * var(--ja,1));transform:translate(-50%,-100%) scaleY(1.08)}100%{opacity:calc(0 * var(--ja,1));transform:translate(-50%,-112%) scaleY(1.22)}}
+@keyframes cmes-plume-rise{0%{opacity:0;transform:translate(-50%,-100%) scale(.35,.2)}26%{opacity:.58;transform:translate(-50%,-100%) scale(.8,.92)}56%{opacity:.46;transform:translate(-50%,-103%) scale(1.08,1.06)}100%{opacity:0;transform:translate(-50%,-110%) scale(1.4,1.12)}}
+@keyframes cmes-crown-pop{0%,16%{opacity:0;transform:translate(-50%,-50%) scale(.2)}34%{opacity:.86;transform:translate(-50%,-50%) scale(1)}58%{opacity:.5;transform:translate(-50%,-54%) scale(1.5)}100%{opacity:0;transform:translate(-50%,-62%) scale(2.1)}}
+@keyframes cmes-fan-bloom{0%,22%{opacity:0;transform:translate(-50%,-50%) scale(.25,.4)}44%{opacity:.5;transform:translate(calc(-50% + var(--fx) * 5 * var(--s)),-52%) scale(1,.9)}72%{opacity:.3;transform:translate(calc(-50% + var(--fx) * 9 * var(--s)),-40%) scale(1.3,.78)}100%{opacity:0;transform:translate(calc(-50% + var(--fx) * 12 * var(--s)),-24%) scale(1.5,.6)}}
+@keyframes cmes-mist-drift{0%,14%{opacity:0;transform:translate(-50%,-50%) scale(.5)}40%{opacity:.62;transform:translate(calc(-50% + var(--mx) * .55),-50%) scale(1)}100%{opacity:0;transform:translate(calc(-50% + var(--mx)),calc(-50% - 3px * var(--s))) scale(1.5)}}
+@keyframes cmes-drop-fly{0%{opacity:0;transform:translate3d(0,0,0)}10%{opacity:1}62%{opacity:.9;transform:translate3d(calc(var(--dx) * .88),var(--dy),0)}100%{opacity:0;transform:translate3d(var(--dx),calc(var(--dy) * .72),0)}}
+@keyframes cmes-burble-pop{0%,20%{opacity:0;transform:scale(.5)}40%{opacity:.95;transform:scale(1)}100%{opacity:0;transform:translate(calc(1px * var(--s)),calc(-7px * var(--s))) scale(.6)}}
+@keyframes cmes-halo-pulse{0%{opacity:0;transform:translate(-50%,-50%) scale(.35)}14%{opacity:.8;transform:translate(-50%,-52%) scale(.9)}34%{opacity:.46;transform:translate(-50%,-58%) scale(1.12)}100%{opacity:0;transform:translate(-50%,-70%) scale(1.38)}}
+@keyframes cmes-shock-ring{0%{opacity:0;transform:translate(-50%,-50%) scale(.3,.24)}12%{opacity:.85}55%{opacity:.32;transform:translate(-50%,-50%) scale(1.7,1.25)}100%{opacity:0;transform:translate(-50%,-50%) scale(2.5,1.8)}}
+@keyframes cmes-bwash-spread{0%{opacity:0;transform:translate(-50%,-50%) scale(.35,.5)}16%{opacity:.6;transform:translate(-50%,-50%) scale(.7,.75)}42%{opacity:.3;transform:translate(-50%,-50%) scale(1,1)}100%{opacity:0;transform:translate(-50%,calc(-50% + 1px * var(--s))) scale(1.5,.92)}}
+@keyframes cmes-thread-rise{0%{opacity:0;transform:translate(-50%,-100%) scaleY(.12)}18%{opacity:.9;transform:translate(-50%,-100%) scaleY(1)}46%{opacity:.55;transform:translate(calc(-50% + var(--tx) * .4),calc(-100% + var(--ty) * .34)) scaleY(1.05)}100%{opacity:0;transform:translate(calc(-50% + var(--tx)),calc(-100% + var(--ty))) scaleY(1.16)}}
+@keyframes cmes-puff-chuff{0%,16%{opacity:0;transform:translate(-50%,-50%) scale(.25,.3)}34%{opacity:.75;transform:translate(-50%,-50%) scale(1,1)}66%{opacity:.38;transform:translate(-50%,calc(-50% - 3px * var(--s))) scale(1.7,1.25)}100%{opacity:0;transform:translate(-50%,calc(-50% - 6px * var(--s))) scale(2.3,1.5)}}
+@keyframes cmes-glint-twinkle{0%,12%{opacity:0;transform:translate(calc(-50% + var(--gx)),calc(-50% + var(--gy))) scale(.2) rotate(0deg)}26%{opacity:.82;transform:translate(calc(-50% + var(--gx)),calc(-50% + var(--gy))) scale(1.1) rotate(24deg)}44%{opacity:.5;transform:translate(calc(-50% + var(--gx)),calc(-50% + var(--gy) - 2px * var(--s))) scale(.85) rotate(52deg)}70%,100%{opacity:0;transform:translate(calc(-50% + var(--gx)),calc(-50% + var(--gy) - 4px * var(--s))) scale(.4) rotate(70deg)}}
+@keyframes cmes-drip-fall{0%{opacity:0;transform:translate(0,-40%) scale(.6)}18%{opacity:.95;transform:translate(0,0) scale(1)}70%{opacity:.9;transform:translate(0,calc(16px * var(--s))) scale(1.05,1.25)}100%{opacity:0;transform:translate(0,calc(22px * var(--s))) scale(.8,1.5)}}
+
+/* ---------- knob: the DeepSeek whale ----------
+   The round puck is gone. The knob is now the official logo — the same WHALE
+   path the agent-team mark draws — MIRRORED so the animal faces right, i.e.
+   looks the way the fill travels. The POSITIONING box stays the puck's 25px
+   (KNOB_D), so the travel, the pointer maths and the spout's anchor are
+   untouched: its centre, not its box, still sits on the value
+   (RAIL_INSET/RAIL_H). The GLYPH is drawn larger than that box (v1.2.12): its
+   height is the knob's own diameter, KNOB_WHALE_H = KNOB_D = 25, so the logo is
+   1.5px taller than the 22px fill and overhangs the groove above and below — the
+   slug rides ON the bar instead of sitting in it, and the round knob's full
+   diameter is what the eye still measures the mark against. Width follows the
+   logo's ratio, KNOB_WHALE_W = 34.27, so it overhangs the 25px box by 4.64px on
+   each side (flex centres it). Filled only, one path, no stroke — a
+   hairline outline smears and fattens the tail flukes into a blob. The two drop
+   shadows are what keep a white whale legible over BOTH halves it straddles: the
+   coloured fill under its left side and the pale track it overhangs on its
+   right. White on blue is also the logo's own colourway (blue tile, white
+   whale), so the knob still reads as the brand rather than as a dot. */
+.cmes-knob{position:absolute;left:calc(11px + (100% - 22px)*var(--cmes-pos,0));top:50%;width:25px;height:25px;display:flex;align-items:center;justify-content:center;color:var(--cmes-knob,#ffffff);pointer-events:none;z-index:3;transform:translate(-50%,-50%);transition:left .18s cubic-bezier(.2,.9,.25,1);will-change:left;filter:var(--cmes-knobFilter,drop-shadow(0 .5px .6px rgba(0,0,0,.55)) drop-shadow(0 1px 2px rgba(0,0,0,.28)))}
+/* v1.2.12: the glyph is taller than the bar and WIDER than the track by its own
+   ratio, so it overhangs the 22px bar top and bottom by 4px (v1.2.13 took it from
+   25 to 30px) and the 25px flex box left and right by 8px. That overhang is the
+   request, not an accident: the red line in the user's zoom measured the OLD round
+   knob's diameter, and the whale has to read bigger than the thing it replaced. */
+.cmes-knobWhale{display:block;flex:none;height:30px;width:41.13px;overflow:visible}
+/* Body path, filled only (v1.2.15). The mark is the same WHALE silhouette the
+   team button draws, mirrored so the animal faces the way the fill travels, and
+   painted in currentColor. The logo's own openings - the eye, the ventral patch,
+   the sliver between fin and flank - are cut out of the path data, so the body
+   itself never paints inside them. */
+.cmes-knobWhaleBase{fill:currentColor;stroke:none}
+/* v1.2.16/17/18: the two openings the user ringed - the eye and the ventral
+   patch - are a flat wash instead of a window onto the rail. The colour walked
+   pale blue #c7dbff (1.2.16) -> deep blue #1e40af (1.2.17) -> the RAIL'S OWN
+   TRACK colour (1.2.18, "改成滑动条的底色的颜色"): --cmes-track is stamped on the
+   rail element per level and inherited here, so the inlay re-tints with the bar
+   instead of being a fixed hue. This rule paints just those two opening
+   subpaths (WHALE_OPENINGS), UNDER the body, so the body covers everything
+   except them and the wash is visible exactly there. The pupil
+   dot is its own hole in the body data too, so it is drawn LAST in ink rather
+   than under the body: painting it under would blend its antialiased edge
+   against the page instead of against the wash and leave a pale rim. The same
+   hairline survives even on top, because the body's hole edge and the dot's own
+   edge are two separate antialiased curves - hence the same-colour stroke,
+   which fattens the dot by half a unit and swallows the seam. No gradient, no
+   motion, no opacity - a hole is a colour now, not a flow. The wash is
+   var() driven so a later palette can retint it without touching the geometry. */
+.cmes-knobWhaleOpening{fill:var(--cmes-knobHole,var(--cmes-track,#e8e7e8));stroke:none}
+.cmes-knobWhalePupil{fill:currentColor;stroke:currentColor;stroke-width:1;stroke-linejoin:round}
+/* PRESS DEFORMATION: holding swells the puck slightly, letting go eases back.
+   Scale only, and the transform origin is the knob's own centre, so its layout
+   box — the thing the pointer maths reads — never moves. */
+.cmes-rail.dragging{cursor:grabbing}
+.cmes-rail.dragging .cmes-knob{transform:translate(-50%,-50%) scale(1.045);transition:none}
+.cmes-noeffort{position:absolute;top:67px;left:12px;right:12px;text-align:center;font-size:12px;line-height:22px;color:var(--dsw-alias-label-secondary)}
+/* Commit failure / catalog error. Used to be four inline styles on the node;
+ * it is a class so the colour comes from the theme, not from a frozen var. */
+.cmes-status{position:absolute;left:12px;right:12px;bottom:6px;text-align:center;font-size:12px;line-height:16px;color:var(--dsw-alias-state-error-primary)}
+@media (prefers-reduced-motion:reduce){
+  /* everything that loops stops moving; the Ultra material parks at its end
+     stop instead of sweeping, and the spout is pure decoration so it is removed
+     rather than slowed (a slow jet rising out of the whale reads as a fault) */
+  .cmes-ultra,.cmes-ultraHaze,.cmes-flow,.cmes-flow>i,.cmes-bubble,.cmes-tex,.cmes-swell,.cmes-podw,.cmes-aurora>i{animation:none}
+  .cmes-ultra{background-position:0 0,100% 0%}
+  .cmes-ultraHaze{opacity:1}
+  .cmes-aurora>i{opacity:.6;transform:translateX(0)}
+  .cmes-spout{display:none}
+  .cmes-rail.dragging .cmes-knob{transform:translate(-50%,-50%) scale(1.03);transition:none}
+}
+
+/* ---------- model pane: two-level drill-down ----------
+   Page 1 lists providers (each with the currently selected model name on the
+   right + a chevron); clicking one slides page 2 in — that provider's models
+   with a search box and a back button. This replaces the earlier
+   collapsible-group list, which had a contradictory open/closed state model.
+   Geometry follows the reference implementation (panel 272 wide, provider row
+   41, model row 39, list max-height 252). */
+/* Issue 2 fix: the pane is anchored with bottom:0 but no top, so its height is
+   content-driven. That made the models pane's height:100% resolve to auto, the
+   whole flex chain lost its definite height, and a long provider list simply
+   overflowed the popover and got clipped with nothing to scroll. Pinning top:0
+   gives the pane a definite height so min-height:0 on the descendants can
+   actually hand the leftover space to the row list. */
+.cmes-models{top:0;height:100%;padding:10px;overflow:hidden;display:flex;flex-direction:column}
+.cmes-viewport{position:relative;overflow:hidden;transition:height .3s cubic-bezier(.32,.72,.28,1);flex:1 1 auto;min-height:0}
+/* Each page is a full-height flex column so its inner list can scroll.
+   Without this the page is content-sized and the LAST row gets clipped by the
+   viewport's overflow:hidden with no way to scroll to it (issue 2). */
+.cmes-page{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;overflow:hidden;transition:transform .3s cubic-bezier(.32,.72,.28,1)}
+.cmes-page.slot1{transform:translateX(0)}
+.cmes-page.slot2{transform:translateX(100%)}
+.cmes-viewport.view2 .cmes-page.slot1{transform:translateX(-100%)}
+.cmes-viewport.view2 .cmes-page.slot2{transform:translateX(0)}
+/* page 1's provider list needs its OWN scroller: the reference learned that a
+   clipped provider row is unreachable because page 1 has no scroll container. */
+.cmes-rows{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:0 2px 4px}
+.cmes-row{width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;background:transparent;border:0;color:var(--dsw-alias-label-primary);font:inherit;font-size:14px;line-height:1.5;padding:10px;border-radius:10px;cursor:pointer;text-align:left;user-select:none}
+.cmes-row:hover,.cmes-row:focus-visible{background:var(--dsw-alias-interactive-bg-hover);outline:none}
+/* Issue 1: a small blue dot marks the provider that holds the CURRENT model,
+   so the active group is visible without opening every provider. It is the
+   second item (after the name), so it sits at the right end of the row. */
+.cmes-rowDot{flex:none;width:6px;height:6px;border-radius:50%;background:var(--cmes-accent,#3a83f7);box-shadow:0 0 0 3px var(--cmes-accentHalo,rgba(58,131,247,.16))}
+/* The provider row is name + dot + chevron: the name absorbs the free space,
+   which pushes the dot and the chevron to the right edge. */
+.cmes-rowName{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cmes-rowChev{width:11px;height:11px;flex:none;color:var(--dsw-alias-label-tertiary,#9aa0ab)}
+/* Both pages of the drill-down share this header: a 26px back button plus the
+   page title (the section name on page 1, the provider on page 2). Its height is
+   2 + 26 + 8 = 36, which is what the JS height model calls HEAD_H. */
+.cmes-head{flex:none;display:flex;align-items:center;gap:6px;padding:2px 4px 8px}
+.cmes-back{width:26px;height:26px;flex:none;display:grid;place-items:center;background:transparent;border:0;border-radius:8px;color:var(--dsw-alias-label-tertiary,#9aa0ab);cursor:pointer}
+.cmes-back:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}
+.cmes-back svg{width:12px;height:12px}
+.cmes-title{font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cmes-search{flex:none;display:flex;align-items:center;gap:8px;margin:0 4px 6px;padding:7px 10px;background:var(--dsw-alias-bg-layer-3,var(--dsw-alias-interactive-bg-hover));border-radius:10px}
+.cmes-search svg{width:13px;height:13px;flex:none;color:var(--dsw-alias-label-caption,#7c8290)}
+.cmes-search input{flex:1 1 auto;min-width:0;background:transparent;border:0;outline:0;color:var(--dsw-alias-label-primary);font:inherit;font-size:13px}
+.cmes-list{flex:1 1 auto;min-height:0;overflow-y:auto;max-height:252px;overscroll-behavior:contain;padding:0 2px 4px}
+.cmes-model{width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;background:transparent;border:0;color:var(--dsw-alias-label-primary);font:inherit;font-size:14px;line-height:1.5;padding:9px 10px;border-radius:9px;cursor:pointer;text-align:left;user-select:none}
+.cmes-model:hover,.cmes-model:focus-visible{background:var(--dsw-alias-interactive-bg-hover);outline:none}
+.cmes-modelName{display:flex;align-items:center;gap:6px;min-width:0}
+.cmes-modelName>span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cmes-model.na .cmes-modelName>span:first-child{color:var(--dsw-alias-label-tertiary,#9aa0ab)}
+.cmes-cnt{flex:none;font-size:10.5px;color:var(--dsw-alias-label-caption,#7c8290);background:var(--dsw-alias-interactive-bg-hover);border-radius:6px;padding:1px 6px}
+.cmes-model.na .cmes-cnt{color:var(--dsw-alias-state-warn-label,#6b5b4a)}
+.cmes-ck{width:15px;height:15px;flex:none;color:var(--dsw-alias-label-primary);opacity:0}
+.cmes-model.sel .cmes-ck{opacity:1}
+.cmes-empty{color:var(--dsw-alias-label-tertiary,#9aa0ab);font-size:13px;padding:14px 10px;text-align:center}
+.cmes-failure{border-radius:8px;background:var(--dsw-alias-interactive-bg-hover-danger,rgba(229,72,77,.12));color:var(--dsw-alias-state-error-primary,#e5484d);font-size:12px;line-height:1.6;padding:4px 8px;margin:0 2px 3px;word-break:break-word}
+.cmes-sr{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+
+/* ---------- dark theme ----------
+   DSH toggles data-ds-dark-theme on <body>; only the static chrome below
+   needs a palette swap, because the fills, inks and track are stamped per
+   level in JS from the EFFORT_*_DARK tables. Surfaces, borders and labels
+   already come from --dsw-alias-* tokens, which flip on their own.
+   Values follow the shipped dark tokens:
+     label-primary #f9fafb | business #7aaaff | bg-layer-1 #232324 */
+body[data-ds-dark-theme] .cmes-root{
+  /* the whale stays white: the colour the knob inherits in dark (#2c2c2e)
+     would sink into the #232324 track and the logo would disappear */
+  --cmes-knob:#f9fafb;
+  /* one soft halo instead of the light theme's two shadows — white on a dark
+     track already reads, it only needs to sit off the glass card behind it */
+  --cmes-knobFilter:drop-shadow(0 1px 2px rgba(0,0,0,.55));
+  /* accents lift to the shipped dark business/peak hues */
+  --cmes-accent:#7aaaff;
+  --cmes-accentPeak:#c39bff;
+  --cmes-accentHalo:rgba(122,170,255,.20);
+  /* the quota warning's ink is NOT set here: it is stamped inline per theme
+     from the ladder's top rung (see the warning div), so the light card gets
+     the Max word's navy and this dark card gets the legible lift of that hue */
+  /* the dark twin, matched to the live host: the wallpaper engine's glass
+     colour is set to navy #0d1524 for BOTH themes and its alpha is 0.19, which
+     is exactly what its panes composite to. The sheer white sheen is the same
+     gradient (a card, not a sidebar); only the lift and the text shadow get
+     heavier so the words still sit off a bright wallpaper patch. */
+  --cmes-panel:#232324;
+  --cmes-panelEdge:rgba(255,255,255,.10);
+  --cmes-panelLift:0 16px 40px rgba(0,0,0,.45),0 2px 8px rgba(0,0,0,.30);
+  --cmes-glassTint:13,21,36;
+  --cmes-glassAlpha:.19;
+  --cmes-glassHighlight:rgba(255,255,255,.32);
+  --cmes-glassHairline:rgba(255,255,255,.09);
+  --cmes-glassLift:0 12px 40px rgba(0,0,0,.28);
+  --cmes-glassText:0 1px 2px rgba(0,0,0,.55),0 0 14px rgba(0,0,0,.32);
+}
+</style><div class="cmes-probe" aria-hidden="true"></div><button class="cmes-trigger" style="--cmes-ink:#2b5992" disabled="false" aria-label="DeepSeek V4 High" aria-expanded="true" aria-haspopup="dialog" aria-busy="false"><span class="cmes-compact"><svg class="cmes-compactIcon" viewBox="0 0 16 16" width="16" height="16" fill="none" strokeWidth="1" aria-hidden="true" focusable="false"><path d="M7.8667 0.349609C8.96906 0.349634 10.0601 0.481272 11.0317 0.735352C11.9973 0.987845 12.8453 1.362 13.4644 1.84766C14.0744 2.32629 14.507 2.95539 14.5161 3.69336H14.5171V8.53516C14.0843 8.32076 13.6108 8.17679 13.1108 8.11816C13.1831 7.96848 13.2162 7.82856 13.2163 7.70312V5.76758C12.6269 6.16618 11.8739 6.47995 11.0317 6.7002C10.0602 6.95423 8.96896 7.08494 7.8667 7.08496C6.76461 7.08493 5.67411 6.95415 4.70264 6.7002C3.85994 6.48006 3.10694 6.1662 2.51709 5.76758V7.70312L2.521 7.78418C2.56374 8.19554 2.93361 8.74414 3.91357 9.23145C4.9281 9.73585 6.35004 10.0371 7.8667 10.0371C8.26373 10.0371 8.6543 10.0141 9.03271 9.97461C8.75596 10.3799 8.54664 10.8349 8.42041 11.3232C8.23666 11.3313 8.0518 11.3369 7.8667 11.3369C6.20108 11.3369 4.57025 11.01 3.33447 10.3955C3.04163 10.2499 2.76658 10.0836 2.51709 9.90039V11.6738C2.51728 12.1379 2.88589 12.7556 3.92236 13.292C4.93457 13.8157 6.35342 14.1289 7.8667 14.1289C8.12318 14.1289 8.37694 14.1161 8.62646 14.0986C8.82021 14.5535 9.08999 14.9682 9.41943 15.3271C8.91285 15.3934 8.39149 15.4287 7.8667 15.4287C6.19761 15.4287 4.56379 15.0869 3.32568 14.4463C2.11244 13.8185 1.21649 12.8562 1.21631 11.6738V3.76367C1.21595 3.74853 1.21438 3.733 1.21436 3.71777C1.21436 2.96917 1.65103 2.33053 2.26807 1.84668C2.88747 1.36112 3.73675 0.987685 4.70264 0.735352C5.67413 0.481376 6.76457 0.349636 7.8667 0.349609ZM7.8667 1.65039C6.86269 1.65042 5.88326 1.77028 5.03076 1.99316C4.17183 2.2176 3.50421 2.52956 3.06982 2.87012C2.65043 3.19909 2.52622 3.48898 2.51709 3.69336V3.74414C2.52719 3.94845 2.65185 4.23772 3.06982 4.56543C3.50425 4.90601 4.17172 5.21795 5.03076 5.44238C5.88326 5.66527 6.8627 5.78513 7.8667 5.78516C8.8707 5.78513 9.85015 5.66525 10.7026 5.44238C11.5611 5.21787 12.2286 4.9049 12.6626 4.56445C13.0982 4.22252 13.2163 3.9231 13.2163 3.71777L13.2104 3.63574C13.1818 3.43623 13.044 3.16941 12.6626 2.87012C12.2286 2.52957 11.5614 2.21773 10.7026 1.99316C9.85009 1.77025 8.8708 1.65041 7.8667 1.65039Z" fill="currentColor" /><path d="M12.8936 10.0361L13.2061 10.5566C13.2296 10.5959 13.2651 10.6562 13.3027 10.707C13.3469 10.7666 13.4148 10.8431 13.5195 10.9023C13.6244 10.9617 13.725 10.9801 13.7988 10.9873C13.8619 10.9934 13.9318 10.9932 13.9775 10.9932H14.6162L14.8896 11.4502L14.5947 11.9443C14.5698 11.9859 14.5312 12.0483 14.5029 12.1084C14.4781 12.1611 14.4514 12.2312 14.4395 12.3164L14.4326 12.4072L14.4395 12.4971C14.4514 12.5825 14.4781 12.6532 14.5029 12.7061C14.5312 12.7661 14.5689 12.8287 14.5938 12.8701L14.8896 13.3633L14.6162 13.8213H13.9775C13.9318 13.8213 13.8619 13.821 13.7988 13.8271C13.7433 13.8326 13.6728 13.8442 13.5967 13.875L13.5195 13.9121C13.4148 13.9714 13.3469 14.0478 13.3027 14.1074C13.265 14.1583 13.2296 14.2186 13.2061 14.2578L12.8936 14.7783H12.3115L11.999 14.2578C11.9755 14.2186 11.9401 14.1583 11.9023 14.1074C11.8693 14.0628 11.823 14.0083 11.7578 13.959L11.6855 13.9121L11.6074 13.875C11.5316 13.8445 11.4615 13.8325 11.4062 13.8271C11.3432 13.821 11.2733 13.8213 11.2275 13.8213H10.5889L10.3135 13.3633L10.6104 12.8701C10.6352 12.8287 10.6739 12.7661 10.7021 12.7061C10.7352 12.6357 10.7724 12.534 10.7725 12.4072C10.7724 12.2804 10.7352 12.1788 10.7021 12.1084C10.6739 12.0483 10.6353 11.9859 10.6104 11.9443L10.3135 11.4502L10.5889 10.9932H11.2275C11.2733 10.9932 11.3432 10.9934 11.4062 10.9873C11.4801 10.9801 11.5808 10.9616 11.6855 10.9023C11.7903 10.843 11.8582 10.7666 11.9023 10.707C11.94 10.6562 11.9755 10.5959 11.999 10.5566L12.3115 10.0361H12.8936Z" stroke="currentColor" strokeMiterlimit="10" /></svg></span><span class="cmes-caption">DeepSeek V4</span><span class="cmes-triggerEffort">High</span><svg class="cmes-chev" viewBox="0 0 16 16" width="14" height="14" fill="none" strokeWidth="1" aria-hidden="true" focusable="false"><path d="M4 6L7.29289 9.29289C7.68342 9.68342 8.31658 9.68342 8.70711 9.29289L12 6" stroke="currentColor" /></svg></button><section class="cmes-popover" style="--cmes-height:220px;--cmes-ink:#2b5992" role="dialog" aria-label="切换模型" aria-hidden="false"><div class="cmes-pane cmes-models" role="menu" aria-label="切换模型"><div class="cmes-viewport" aria-hidden="false"><div class="cmes-page slot1"><div class="cmes-head"><button class="cmes-back" type="button" aria-label="返回" title="返回"><svg class="cmes-iconSmall" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg></button><span class="cmes-title">切换模型</span></div><div class="cmes-rows"><button class="cmes-row" type="button" aria-expanded="false"><span class="cmes-rowName">DeepSeek</span><span class="cmes-rowDot" hidden="false" aria-hidden="true"></span><svg class="cmes-rowChev" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg></button><button class="cmes-row" type="button" aria-expanded="false"><span class="cmes-rowName">OpenAI</span><span class="cmes-rowDot" hidden="true" aria-hidden="true"></span><svg class="cmes-rowChev" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg></button><button class="cmes-row" type="button" aria-expanded="false"><span class="cmes-rowName">Anthropic</span><span class="cmes-rowDot" hidden="true" aria-hidden="true"></span><svg class="cmes-rowChev" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg></button><button class="cmes-row" type="button" aria-expanded="false"><span class="cmes-rowName">Google</span><span class="cmes-rowDot" hidden="true" aria-hidden="true"></span><svg class="cmes-rowChev" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg></button></div></div><div class="cmes-page slot2" inert=""><div class="cmes-head"><button class="cmes-back" type="button" aria-label="返回" title="返回"><svg class="cmes-iconSmall" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg></button><span class="cmes-title"></span></div><label class="cmes-search"><svg class="cmes-iconSmall" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14ZM20 20l-4-4" /></svg><input type="text" value="" placeholder="搜索模型" aria-label="搜索模型" spellCheck="false" /></label><div class="cmes-list"></div></div></div></div><div class="cmes-pane cmes-main hidden" inert=""><button class="cmes-tool cmes-fast" aria-label="智能体团队协作" aria-pressed="false" aria-describedby="cmes-team-tip"><svg class="cmes-teamMark" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M22.9168 1.43018C22.6713 1.31018 22.5658 1.53918 22.4223 1.65519C22.3733 1.69269 22.3318 1.74169 22.2903 1.78669C21.9317 2.1697 21.5127 2.42121 20.9657 2.39121C20.1657 2.34621 19.4827 2.59771 18.8787 3.20973C18.7502 2.45521 18.3236 2.0047 17.6746 1.71569C17.3351 1.56568 16.9916 1.41518 16.7536 1.08867C16.5876 0.856163 16.5421 0.597155 16.4591 0.341647C16.4061 0.187643 16.3536 0.0301382 16.1761 0.00363739C15.9836 -0.0263635 15.9081 0.135141 15.8326 0.270145C15.5306 0.822162 15.4136 1.43018 15.4251 2.0462C15.4516 3.43174 16.0366 4.53527 17.1991 5.3203C17.3311 5.4103 17.3651 5.5003 17.3236 5.63181C17.2441 5.90231 17.1501 6.16482 17.0671 6.43533C17.0141 6.60784 16.9351 6.64584 16.7501 6.57033C16.1121 6.30383 15.5611 5.90931 15.074 5.4328C14.2475 4.63328 13.5 3.75075 12.568 3.05973C12.349 2.89822 12.13 2.74822 11.9034 2.60522C10.9524 1.68169 12.028 0.923165 12.277 0.833162C12.5375 0.739159 12.3675 0.41615 11.5259 0.42015C10.6844 0.42365 9.91439 0.705658 8.93286 1.08117C8.78935 1.13767 8.63835 1.17867 8.48384 1.21267C7.59332 1.04367 6.66829 1.00617 5.70226 1.11517C3.88321 1.31768 2.43016 2.1777 1.36213 3.64575C0.0790928 5.4103 -0.222916 7.41536 0.146595 9.50642C0.535106 11.7105 1.66014 13.535 3.38869 14.9616C5.18125 16.4406 7.24581 17.1657 9.60138 17.0266C11.0319 16.9441 12.6245 16.7526 14.421 15.2321C14.874 15.4576 15.3496 15.5476 16.1381 15.6151C16.7456 15.6716 17.3306 15.5851 17.7836 15.4911C18.4931 15.3411 18.4441 14.6841 18.1876 14.5636C16.1081 13.595 16.5646 13.9891 16.1496 13.67C17.2061 12.42 18.8202 10.1979 19.3182 7.17235C19.3672 6.83834 19.4297 6.36783 19.4222 6.09732C19.4182 5.93231 19.4562 5.86831 19.6447 5.84931C20.1657 5.78931 20.6712 5.64681 21.1357 5.3913C22.4833 4.65528 23.0268 3.44624 23.1548 1.9972C23.1738 1.77569 23.1508 1.54668 22.9168 1.43018ZM11.1749 14.4736C9.15936 12.889 8.18184 12.3675 7.77832 12.39C7.40081 12.4125 7.46881 12.8445 7.55182 13.126C7.63882 13.404 7.75182 13.5955 7.91033 13.8396C8.01983 14.0011 8.09533 14.2411 7.80083 14.4216C7.15181 14.8231 6.02327 14.2866 5.97027 14.2601C4.65673 13.4865 3.5587 12.4655 2.78467 11.069C2.03715 9.72493 1.60314 8.28289 1.53164 6.74384C1.51264 6.37233 1.62214 6.24082 1.99215 6.17332C2.47916 6.08332 2.98118 6.06432 3.46769 6.13582C5.52476 6.43633 7.27581 7.35586 8.74385 8.8129C9.58188 9.64243 10.2159 10.634 10.8689 11.6025C11.5634 12.631 12.3105 13.611 13.262 14.4146C13.598 14.6961 13.866 14.9101 14.1225 15.0681C13.349 15.1546 12.058 15.1731 11.1749 14.4746L11.1749 14.4736ZM12.141 8.25988C12.141 8.09488 12.273 7.96338 12.439 7.96338C12.4765 7.96338 12.5105 7.97088 12.541 7.98188C12.5825 7.99688 12.6205 8.01938 12.6505 8.05338C12.7035 8.10588 12.7335 8.18088 12.7335 8.25988C12.7335 8.42489 12.6015 8.55639 12.4355 8.55639C12.2695 8.55639 12.141 8.42489 12.141 8.25988ZM15.1415 9.79893C14.949 9.87793 14.7565 9.94544 14.5715 9.95294C14.2845 9.96794 13.9715 9.85143 13.8015 9.70893C13.5375 9.48742 13.3485 9.36342 13.2695 8.97691C13.2355 8.8119 13.2545 8.55639 13.2845 8.40989C13.3525 8.09438 13.277 7.89187 13.0545 7.70787C12.8735 7.55786 12.643 7.51636 12.39 7.51636C12.2955 7.51636 12.209 7.47486 12.1445 7.44136C12.039 7.38886 11.9519 7.25735 12.035 7.09585C12.0615 7.04335 12.19 6.91584 12.22 6.89334C12.5635 6.69784 12.9595 6.76184 13.326 6.90834C13.6655 7.04735 13.9225 7.30236 14.292 7.66287C14.6695 8.09838 14.7375 8.21838 14.9525 8.54539C15.1225 8.8009 15.277 9.06341 15.3831 9.36392C15.4471 9.55142 15.3641 9.70493 15.1415 9.79893Z" transform="translate(1.4 8.8) scale(0.6)" /><path d="M22.9168 1.43018C22.6713 1.31018 22.5658 1.53918 22.4223 1.65519C22.3733 1.69269 22.3318 1.74169 22.2903 1.78669C21.9317 2.1697 21.5127 2.42121 20.9657 2.39121C20.1657 2.34621 19.4827 2.59771 18.8787 3.20973C18.7502 2.45521 18.3236 2.0047 17.6746 1.71569C17.3351 1.56568 16.9916 1.41518 16.7536 1.08867C16.5876 0.856163 16.5421 0.597155 16.4591 0.341647C16.4061 0.187643 16.3536 0.0301382 16.1761 0.00363739C15.9836 -0.0263635 15.9081 0.135141 15.8326 0.270145C15.5306 0.822162 15.4136 1.43018 15.4251 2.0462C15.4516 3.43174 16.0366 4.53527 17.1991 5.3203C17.3311 5.4103 17.3651 5.5003 17.3236 5.63181C17.2441 5.90231 17.1501 6.16482 17.0671 6.43533C17.0141 6.60784 16.9351 6.64584 16.7501 6.57033C16.1121 6.30383 15.5611 5.90931 15.074 5.4328C14.2475 4.63328 13.5 3.75075 12.568 3.05973C12.349 2.89822 12.13 2.74822 11.9034 2.60522C10.9524 1.68169 12.028 0.923165 12.277 0.833162C12.5375 0.739159 12.3675 0.41615 11.5259 0.42015C10.6844 0.42365 9.91439 0.705658 8.93286 1.08117C8.78935 1.13767 8.63835 1.17867 8.48384 1.21267C7.59332 1.04367 6.66829 1.00617 5.70226 1.11517C3.88321 1.31768 2.43016 2.1777 1.36213 3.64575C0.0790928 5.4103 -0.222916 7.41536 0.146595 9.50642C0.535106 11.7105 1.66014 13.535 3.38869 14.9616C5.18125 16.4406 7.24581 17.1657 9.60138 17.0266C11.0319 16.9441 12.6245 16.7526 14.421 15.2321C14.874 15.4576 15.3496 15.5476 16.1381 15.6151C16.7456 15.6716 17.3306 15.5851 17.7836 15.4911C18.4931 15.3411 18.4441 14.6841 18.1876 14.5636C16.1081 13.595 16.5646 13.9891 16.1496 13.67C17.2061 12.42 18.8202 10.1979 19.3182 7.17235C19.3672 6.83834 19.4297 6.36783 19.4222 6.09732C19.4182 5.93231 19.4562 5.86831 19.6447 5.84931C20.1657 5.78931 20.6712 5.64681 21.1357 5.3913C22.4833 4.65528 23.0268 3.44624 23.1548 1.9972C23.1738 1.77569 23.1508 1.54668 22.9168 1.43018ZM11.1749 14.4736C9.15936 12.889 8.18184 12.3675 7.77832 12.39C7.40081 12.4125 7.46881 12.8445 7.55182 13.126C7.63882 13.404 7.75182 13.5955 7.91033 13.8396C8.01983 14.0011 8.09533 14.2411 7.80083 14.4216C7.15181 14.8231 6.02327 14.2866 5.97027 14.2601C4.65673 13.4865 3.5587 12.4655 2.78467 11.069C2.03715 9.72493 1.60314 8.28289 1.53164 6.74384C1.51264 6.37233 1.62214 6.24082 1.99215 6.17332C2.47916 6.08332 2.98118 6.06432 3.46769 6.13582C5.52476 6.43633 7.27581 7.35586 8.74385 8.8129C9.58188 9.64243 10.2159 10.634 10.8689 11.6025C11.5634 12.631 12.3105 13.611 13.262 14.4146C13.598 14.6961 13.866 14.9101 14.1225 15.0681C13.349 15.1546 12.058 15.1731 11.1749 14.4746L11.1749 14.4736ZM12.141 8.25988C12.141 8.09488 12.273 7.96338 12.439 7.96338C12.4765 7.96338 12.5105 7.97088 12.541 7.98188C12.5825 7.99688 12.6205 8.01938 12.6505 8.05338C12.7035 8.10588 12.7335 8.18088 12.7335 8.25988C12.7335 8.42489 12.6015 8.55639 12.4355 8.55639C12.2695 8.55639 12.141 8.42489 12.141 8.25988ZM15.1415 9.79893C14.949 9.87793 14.7565 9.94544 14.5715 9.95294C14.2845 9.96794 13.9715 9.85143 13.8015 9.70893C13.5375 9.48742 13.3485 9.36342 13.2695 8.97691C13.2355 8.8119 13.2545 8.55639 13.2845 8.40989C13.3525 8.09438 13.277 7.89187 13.0545 7.70787C12.8735 7.55786 12.643 7.51636 12.39 7.51636C12.2955 7.51636 12.209 7.47486 12.1445 7.44136C12.039 7.38886 11.9519 7.25735 12.035 7.09585C12.0615 7.04335 12.19 6.91584 12.22 6.89334C12.5635 6.69784 12.9595 6.76184 13.326 6.90834C13.6655 7.04735 13.9225 7.30236 14.292 7.66287C14.6695 8.09838 14.7375 8.21838 14.9525 8.54539C15.1225 8.8009 15.277 9.06341 15.3831 9.36392C15.4471 9.55142 15.3641 9.70493 15.1415 9.79893Z" transform="translate(10.2 5.2) scale(0.3)" /><path d="M22.9168 1.43018C22.6713 1.31018 22.5658 1.53918 22.4223 1.65519C22.3733 1.69269 22.3318 1.74169 22.2903 1.78669C21.9317 2.1697 21.5127 2.42121 20.9657 2.39121C20.1657 2.34621 19.4827 2.59771 18.8787 3.20973C18.7502 2.45521 18.3236 2.0047 17.6746 1.71569C17.3351 1.56568 16.9916 1.41518 16.7536 1.08867C16.5876 0.856163 16.5421 0.597155 16.4591 0.341647C16.4061 0.187643 16.3536 0.0301382 16.1761 0.00363739C15.9836 -0.0263635 15.9081 0.135141 15.8326 0.270145C15.5306 0.822162 15.4136 1.43018 15.4251 2.0462C15.4516 3.43174 16.0366 4.53527 17.1991 5.3203C17.3311 5.4103 17.3651 5.5003 17.3236 5.63181C17.2441 5.90231 17.1501 6.16482 17.0671 6.43533C17.0141 6.60784 16.9351 6.64584 16.7501 6.57033C16.1121 6.30383 15.5611 5.90931 15.074 5.4328C14.2475 4.63328 13.5 3.75075 12.568 3.05973C12.349 2.89822 12.13 2.74822 11.9034 2.60522C10.9524 1.68169 12.028 0.923165 12.277 0.833162C12.5375 0.739159 12.3675 0.41615 11.5259 0.42015C10.6844 0.42365 9.91439 0.705658 8.93286 1.08117C8.78935 1.13767 8.63835 1.17867 8.48384 1.21267C7.59332 1.04367 6.66829 1.00617 5.70226 1.11517C3.88321 1.31768 2.43016 2.1777 1.36213 3.64575C0.0790928 5.4103 -0.222916 7.41536 0.146595 9.50642C0.535106 11.7105 1.66014 13.535 3.38869 14.9616C5.18125 16.4406 7.24581 17.1657 9.60138 17.0266C11.0319 16.9441 12.6245 16.7526 14.421 15.2321C14.874 15.4576 15.3496 15.5476 16.1381 15.6151C16.7456 15.6716 17.3306 15.5851 17.7836 15.4911C18.4931 15.3411 18.4441 14.6841 18.1876 14.5636C16.1081 13.595 16.5646 13.9891 16.1496 13.67C17.2061 12.42 18.8202 10.1979 19.3182 7.17235C19.3672 6.83834 19.4297 6.36783 19.4222 6.09732C19.4182 5.93231 19.4562 5.86831 19.6447 5.84931C20.1657 5.78931 20.6712 5.64681 21.1357 5.3913C22.4833 4.65528 23.0268 3.44624 23.1548 1.9972C23.1738 1.77569 23.1508 1.54668 22.9168 1.43018ZM11.1749 14.4736C9.15936 12.889 8.18184 12.3675 7.77832 12.39C7.40081 12.4125 7.46881 12.8445 7.55182 13.126C7.63882 13.404 7.75182 13.5955 7.91033 13.8396C8.01983 14.0011 8.09533 14.2411 7.80083 14.4216C7.15181 14.8231 6.02327 14.2866 5.97027 14.2601C4.65673 13.4865 3.5587 12.4655 2.78467 11.069C2.03715 9.72493 1.60314 8.28289 1.53164 6.74384C1.51264 6.37233 1.62214 6.24082 1.99215 6.17332C2.47916 6.08332 2.98118 6.06432 3.46769 6.13582C5.52476 6.43633 7.27581 7.35586 8.74385 8.8129C9.58188 9.64243 10.2159 10.634 10.8689 11.6025C11.5634 12.631 12.3105 13.611 13.262 14.4146C13.598 14.6961 13.866 14.9101 14.1225 15.0681C13.349 15.1546 12.058 15.1731 11.1749 14.4746L11.1749 14.4736ZM12.141 8.25988C12.141 8.09488 12.273 7.96338 12.439 7.96338C12.4765 7.96338 12.5105 7.97088 12.541 7.98188C12.5825 7.99688 12.6205 8.01938 12.6505 8.05338C12.7035 8.10588 12.7335 8.18088 12.7335 8.25988C12.7335 8.42489 12.6015 8.55639 12.4355 8.55639C12.2695 8.55639 12.141 8.42489 12.141 8.25988ZM15.1415 9.79893C14.949 9.87793 14.7565 9.94544 14.5715 9.95294C14.2845 9.96794 13.9715 9.85143 13.8015 9.70893C13.5375 9.48742 13.3485 9.36342 13.2695 8.97691C13.2355 8.8119 13.2545 8.55639 13.2845 8.40989C13.3525 8.09438 13.277 7.89187 13.0545 7.70787C12.8735 7.55786 12.643 7.51636 12.39 7.51636C12.2955 7.51636 12.209 7.47486 12.1445 7.44136C12.039 7.38886 11.9519 7.25735 12.035 7.09585C12.0615 7.04335 12.19 6.91584 12.22 6.89334C12.5635 6.69784 12.9595 6.76184 13.326 6.90834C13.6655 7.04735 13.9225 7.30236 14.292 7.66287C14.6695 8.09838 14.7375 8.21838 14.9525 8.54539C15.1225 8.8009 15.277 9.06341 15.3831 9.36392C15.4471 9.55142 15.3641 9.70493 15.1415 9.79893Z" transform="translate(12.6 10) scale(0.42)" /></svg></button><button class="cmes-modelLink" aria-label="切换模型" title="DeepSeek V4"><span class="cmes-heading">High<svg class="cmes-iconSmall" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg></span><span class="cmes-modelName">V4</span></button><div class="cmes-warning" style="--cmes-warnInk:#113a6e"><span></span></div><button class="cmes-tool cmes-reset" disabled="false" aria-label="重置为默认" title="重置为默认"><svg class="cmes-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11a9 9 0 1 1 2.6 7M3 4v7h7" /></svg></button><div class="cmes-rail" style="--cmes-fill:#3a78c4;--cmes-fillBg:linear-gradient(90deg, rgb(134,194,234) 0%, rgb(134,194,234) 20%, rgb(134,194,234) 40%, rgb(58,120,196) 60%, rgb(58,120,196) 80%, rgb(58,120,196) 100%);--cmes-fillBgDark:linear-gradient(90deg, rgb(110,170,214) 0%, rgb(110,170,214) 20%, rgb(110,170,214) 40%, rgb(44,104,168) 60%, rgb(44,104,168) 80%, rgb(44,104,168) 100%);--cmes-track:#c2cfe0;--cmes-ink:#2b5992;--cmes-podfade:1.00;--cmes-pos:0.6666666666666666" role="slider" tabIndex="0" aria-label="推理强度" aria-valuemin="0" aria-valuemax="3" aria-valuenow="2" aria-valuetext="High" aria-disabled="false"><div class="cmes-fill"><div class="cmes-tex" aria-hidden="true"></div><div class="cmes-swell" aria-hidden="true"></div><div class="cmes-water" aria-hidden="true"><div class="cmes-flow" style="top:8.0%;animation-duration:2.74s;animation-delay:-1.71s"><i class="cmes-fil" style="--cmes-ds:0.80;--cmes-fw:42.6px;margin-top:-1.1px;opacity:0.45;animation-duration:2.29s;animation-delay:-1.09s"></i><i class="cmes-fil" style="--cmes-ds:0.80;--cmes-fw:27.7px;margin-left:52.0px;margin-top:1.6px;opacity:0.45;animation-duration:3.10s;animation-delay:-1.36s"></i></div><div class="cmes-flow" style="top:36.0%;animation-duration:2.27s;animation-delay:-0.55s"><i class="cmes-fil" style="--cmes-ds:1.00;--cmes-fw:35.0px;margin-top:-0.8px;opacity:0.62;animation-duration:2.09s;animation-delay:-1.99s"></i><i class="cmes-wisp" style="--cmes-wl:20.2px;margin-left:42.7px;margin-top:0.9px;animation-duration:3.34s;animation-delay:-1.26s"></i></div><div class="cmes-flow" style="top:64.0%;animation-duration:2.27s;animation-delay:-1.96s"><i class="cmes-fil" style="--cmes-ds:1.20;--cmes-fw:59.0px;margin-top:-0.5px;opacity:0.78;animation-duration:1.88s;animation-delay:-0.81s"></i><i class="cmes-fil" style="--cmes-ds:1.20;--cmes-fw:44.0px;margin-left:54.6px;margin-top:-1.7px;opacity:0.78;animation-duration:2.54s;animation-delay:-1.03s"></i></div><div class="cmes-flow" style="top:92.0%;animation-duration:1.97s;animation-delay:-0.95s"><i class="cmes-fil" style="--cmes-ds:1.40;--cmes-fw:51.4px;margin-top:0.9px;opacity:0.95;animation-duration:1.42s;animation-delay:-1.28s"></i><i class="cmes-wisp" style="--cmes-wl:28.4px;margin-left:9.2px;margin-top:-2.4px;animation-duration:2.27s;animation-delay:-0.30s"></i></div><div class="cmes-flow" style="top:32.0%;animation-duration:2.62s;animation-delay:-0.28s"><i class="cmes-fil" style="--cmes-ds:0.97;--cmes-fw:52.3px;margin-top:1.2px;opacity:0.59;animation-duration:2.41s;animation-delay:-0.92s"></i><i class="cmes-fil" style="--cmes-ds:0.97;--cmes-fw:37.4px;margin-left:68.0px;margin-top:-1.1px;opacity:0.59;animation-duration:3.25s;animation-delay:-1.21s"></i></div><div class="cmes-flow" style="top:60.0%;animation-duration:2.23s;animation-delay:-1.62s"><i class="cmes-fil" style="--cmes-ds:1.17;--cmes-fw:44.7px;margin-top:1.6px;opacity:0.76;animation-duration:2.20s;animation-delay:-1.89s"></i><i class="cmes-wisp" style="--cmes-wl:18.6px;margin-left:43.9px;margin-top:1.5px;animation-duration:3.53s;animation-delay:-1.80s"></i></div><div class="cmes-flow" style="top:88.0%;animation-duration:1.93s;animation-delay:-0.66s"><i class="cmes-fil" style="--cmes-ds:1.37;--cmes-fw:63.1px;margin-top:-2.1px;opacity:0.93;animation-duration:1.74s;animation-delay:-0.21s"></i><i class="cmes-fil" style="--cmes-ds:1.37;--cmes-fw:53.7px;margin-left:70.5px;margin-top:0.6px;opacity:0.93;animation-duration:2.35s;animation-delay:-0.41s"></i><i class="cmes-wisp" style="--cmes-wl:22.7px;margin-left:27.2px;margin-top:-0.8px;animation-duration:2.78s;animation-delay:-0.20s"></i></div><div class="cmes-flow" style="top:28.0%;animation-duration:2.58s;animation-delay:-2.48s"><i class="cmes-fil" style="--cmes-ds:0.94;--cmes-fw:38.0px;margin-top:-1.7px;opacity:0.57;animation-duration:1.53s;animation-delay:-0.91s"></i></div><div class="cmes-flow" style="top:56.0%;animation-duration:2.18s;animation-delay:-1.28s"><i class="cmes-fil" style="--cmes-ds:1.14;--cmes-fw:56.4px;margin-top:-1.4px;opacity:0.74;animation-duration:1.33s;animation-delay:-0.09s"></i><i class="cmes-fil" style="--cmes-ds:1.14;--cmes-fw:47.1px;margin-left:83.9px;margin-top:2.3px;opacity:0.74;animation-duration:1.79s;animation-delay:-0.25s"></i><i class="cmes-wisp" style="--cmes-wl:27.0px;margin-left:49.8px;margin-top:-2.9px;animation-duration:2.12s;animation-delay:-0.96s"></i></div><div class="cmes-flow" style="top:84.0%;animation-duration:1.88s;animation-delay:-0.39s"><i class="cmes-fil" style="--cmes-ds:1.34;--cmes-fw:54.4px;margin-top:-1.1px;opacity:0.90;animation-duration:2.32s;animation-delay:-1.27s"></i></div><div class="cmes-flow" style="top:24.0%;animation-duration:2.53s;animation-delay:-2.09s"><i class="cmes-fil" style="--cmes-ds:0.91;--cmes-fw:49.7px;margin-top:0.3px;opacity:0.55;animation-duration:1.86s;animation-delay:-0.04s"></i><i class="cmes-wisp" style="--cmes-wl:17.1px;margin-left:16.3px;margin-top:-0.2px;animation-duration:2.97s;animation-delay:-0.61s"></i></div><div class="cmes-flow" style="top:52.0%;animation-duration:2.13s;animation-delay:-0.95s"><i class="cmes-fil" style="--cmes-ds:1.11;--cmes-fw:47.7px;margin-top:0.6px;opacity:0.71;animation-duration:1.65s;animation-delay:-0.83s"></i><i class="cmes-fil" style="--cmes-ds:1.11;--cmes-fw:58.8px;margin-left:87.8px;margin-top:-0.7px;opacity:0.71;animation-duration:2.23s;animation-delay:-0.67s"></i></div><div class="cmes-flow" style="top:80.0%;animation-duration:1.90s;animation-delay:-0.08s"><i class="cmes-fil" style="--cmes-ds:1.31;--cmes-fw:66.1px;margin-top:0.9px;opacity:0.88;animation-duration:1.45s;animation-delay:-1.10s"></i><i class="cmes-wisp" style="--cmes-wl:25.3px;margin-left:51.1px;margin-top:-2.3px;animation-duration:2.31s;animation-delay:-1.35s"></i></div><div class="cmes-flow" style="top:20.0%;animation-duration:2.57s;animation-delay:-1.70s"><i class="cmes-fil" style="--cmes-ds:0.89;--cmes-fw:35.4px;margin-top:2.3px;opacity:0.52;animation-duration:2.18s;animation-delay:-0.52s"></i><i class="cmes-fil" style="--cmes-ds:0.89;--cmes-fw:52.1px;margin-left:51.1px;margin-top:-0.0px;opacity:0.52;animation-duration:2.94s;animation-delay:-0.78s"></i><i class="cmes-wisp" style="--cmes-wl:29.4px;margin-left:34.3px;margin-top:1.4px;animation-duration:3.49s;animation-delay:-0.51s"></i></div></div></div><div class="cmes-knob"><div class="cmes-pod" aria-hidden="true"><svg class="cmes-podw podMid" viewBox="-0.2229 -0.0263 23.3967 17.0659" preserveAspectRatio="xMidYMid meet" aria-hidden="true" focusable="false"><path class="cmes-podBase" d="M22.9168 1.43018C22.6713 1.31018 22.5658 1.53918 22.4223 1.65519C22.3733 1.69269 22.3318 1.74169 22.2903 1.78669C21.9317 2.1697 21.5127 2.42121 20.9657 2.39121C20.1657 2.34621 19.4827 2.59771 18.8787 3.20973C18.7502 2.45521 18.3236 2.0047 17.6746 1.71569C17.3351 1.56568 16.9916 1.41518 16.7536 1.08867C16.5876 0.856163 16.5421 0.597155 16.4591 0.341647C16.4061 0.187643 16.3536 0.0301382 16.1761 0.00363739C15.9836 -0.0263635 15.9081 0.135141 15.8326 0.270145C15.5306 0.822162 15.4136 1.43018 15.4251 2.0462C15.4516 3.43174 16.0366 4.53527 17.1991 5.3203C17.3311 5.4103 17.3651 5.5003 17.3236 5.63181C17.2441 5.90231 17.1501 6.16482 17.0671 6.43533C17.0141 6.60784 16.9351 6.64584 16.7501 6.57033C16.1121 6.30383 15.5611 5.90931 15.074 5.4328C14.2475 4.63328 13.5 3.75075 12.568 3.05973C12.349 2.89822 12.13 2.74822 11.9034 2.60522C10.9524 1.68169 12.028 0.923165 12.277 0.833162C12.5375 0.739159 12.3675 0.41615 11.5259 0.42015C10.6844 0.42365 9.91439 0.705658 8.93286 1.08117C8.78935 1.13767 8.63835 1.17867 8.48384 1.21267C7.59332 1.04367 6.66829 1.00617 5.70226 1.11517C3.88321 1.31768 2.43016 2.1777 1.36213 3.64575C0.0790928 5.4103 -0.222916 7.41536 0.146595 9.50642C0.535106 11.7105 1.66014 13.535 3.38869 14.9616C5.18125 16.4406 7.24581 17.1657 9.60138 17.0266C11.0319 16.9441 12.6245 16.7526 14.421 15.2321C14.874 15.4576 15.3496 15.5476 16.1381 15.6151C16.7456 15.6716 17.3306 15.5851 17.7836 15.4911C18.4931 15.3411 18.4441 14.6841 18.1876 14.5636C16.1081 13.595 16.5646 13.9891 16.1496 13.67C17.2061 12.42 18.8202 10.1979 19.3182 7.17235C19.3672 6.83834 19.4297 6.36783 19.4222 6.09732C19.4182 5.93231 19.4562 5.86831 19.6447 5.84931C20.1657 5.78931 20.6712 5.64681 21.1357 5.3913C22.4833 4.65528 23.0268 3.44624 23.1548 1.9972C23.1738 1.77569 23.1508 1.54668 22.9168 1.43018ZM11.1749 14.4736C9.15936 12.889 8.18184 12.3675 7.77832 12.39C7.40081 12.4125 7.46881 12.8445 7.55182 13.126C7.63882 13.404 7.75182 13.5955 7.91033 13.8396C8.01983 14.0011 8.09533 14.2411 7.80083 14.4216C7.15181 14.8231 6.02327 14.2866 5.97027 14.2601C4.65673 13.4865 3.5587 12.4655 2.78467 11.069C2.03715 9.72493 1.60314 8.28289 1.53164 6.74384C1.51264 6.37233 1.62214 6.24082 1.99215 6.17332C2.47916 6.08332 2.98118 6.06432 3.46769 6.13582C5.52476 6.43633 7.27581 7.35586 8.74385 8.8129C9.58188 9.64243 10.2159 10.634 10.8689 11.6025C11.5634 12.631 12.3105 13.611 13.262 14.4146C13.598 14.6961 13.866 14.9101 14.1225 15.0681C13.349 15.1546 12.058 15.1731 11.1749 14.4746L11.1749 14.4736ZM12.141 8.25988C12.141 8.09488 12.273 7.96338 12.439 7.96338C12.4765 7.96338 12.5105 7.97088 12.541 7.98188C12.5825 7.99688 12.6205 8.01938 12.6505 8.05338C12.7035 8.10588 12.7335 8.18088 12.7335 8.25988C12.7335 8.42489 12.6015 8.55639 12.4355 8.55639C12.2695 8.55639 12.141 8.42489 12.141 8.25988ZM15.1415 9.79893C14.949 9.87793 14.7565 9.94544 14.5715 9.95294C14.2845 9.96794 13.9715 9.85143 13.8015 9.70893C13.5375 9.48742 13.3485 9.36342 13.2695 8.97691C13.2355 8.8119 13.2545 8.55639 13.2845 8.40989C13.3525 8.09438 13.277 7.89187 13.0545 7.70787C12.8735 7.55786 12.643 7.51636 12.39 7.51636C12.2955 7.51636 12.209 7.47486 12.1445 7.44136C12.039 7.38886 11.9519 7.25735 12.035 7.09585C12.0615 7.04335 12.19 6.91584 12.22 6.89334C12.5635 6.69784 12.9595 6.76184 13.326 6.90834C13.6655 7.04735 13.9225 7.30236 14.292 7.66287C14.6695 8.09838 14.7375 8.21838 14.9525 8.54539C15.1225 8.8009 15.277 9.06341 15.3831 9.36392C15.4471 9.55142 15.3641 9.70493 15.1415 9.79893Z" transform="translate(22.9509 0) scale(-1 1)" /></svg><svg class="cmes-podw podBig" viewBox="-0.2229 -0.0263 23.3967 17.0659" preserveAspectRatio="xMidYMid meet" aria-hidden="true" focusable="false"><path class="cmes-podBase" d="M22.9168 1.43018C22.6713 1.31018 22.5658 1.53918 22.4223 1.65519C22.3733 1.69269 22.3318 1.74169 22.2903 1.78669C21.9317 2.1697 21.5127 2.42121 20.9657 2.39121C20.1657 2.34621 19.4827 2.59771 18.8787 3.20973C18.7502 2.45521 18.3236 2.0047 17.6746 1.71569C17.3351 1.56568 16.9916 1.41518 16.7536 1.08867C16.5876 0.856163 16.5421 0.597155 16.4591 0.341647C16.4061 0.187643 16.3536 0.0301382 16.1761 0.00363739C15.9836 -0.0263635 15.9081 0.135141 15.8326 0.270145C15.5306 0.822162 15.4136 1.43018 15.4251 2.0462C15.4516 3.43174 16.0366 4.53527 17.1991 5.3203C17.3311 5.4103 17.3651 5.5003 17.3236 5.63181C17.2441 5.90231 17.1501 6.16482 17.0671 6.43533C17.0141 6.60784 16.9351 6.64584 16.7501 6.57033C16.1121 6.30383 15.5611 5.90931 15.074 5.4328C14.2475 4.63328 13.5 3.75075 12.568 3.05973C12.349 2.89822 12.13 2.74822 11.9034 2.60522C10.9524 1.68169 12.028 0.923165 12.277 0.833162C12.5375 0.739159 12.3675 0.41615 11.5259 0.42015C10.6844 0.42365 9.91439 0.705658 8.93286 1.08117C8.78935 1.13767 8.63835 1.17867 8.48384 1.21267C7.59332 1.04367 6.66829 1.00617 5.70226 1.11517C3.88321 1.31768 2.43016 2.1777 1.36213 3.64575C0.0790928 5.4103 -0.222916 7.41536 0.146595 9.50642C0.535106 11.7105 1.66014 13.535 3.38869 14.9616C5.18125 16.4406 7.24581 17.1657 9.60138 17.0266C11.0319 16.9441 12.6245 16.7526 14.421 15.2321C14.874 15.4576 15.3496 15.5476 16.1381 15.6151C16.7456 15.6716 17.3306 15.5851 17.7836 15.4911C18.4931 15.3411 18.4441 14.6841 18.1876 14.5636C16.1081 13.595 16.5646 13.9891 16.1496 13.67C17.2061 12.42 18.8202 10.1979 19.3182 7.17235C19.3672 6.83834 19.4297 6.36783 19.4222 6.09732C19.4182 5.93231 19.4562 5.86831 19.6447 5.84931C20.1657 5.78931 20.6712 5.64681 21.1357 5.3913C22.4833 4.65528 23.0268 3.44624 23.1548 1.9972C23.1738 1.77569 23.1508 1.54668 22.9168 1.43018ZM11.1749 14.4736C9.15936 12.889 8.18184 12.3675 7.77832 12.39C7.40081 12.4125 7.46881 12.8445 7.55182 13.126C7.63882 13.404 7.75182 13.5955 7.91033 13.8396C8.01983 14.0011 8.09533 14.2411 7.80083 14.4216C7.15181 14.8231 6.02327 14.2866 5.97027 14.2601C4.65673 13.4865 3.5587 12.4655 2.78467 11.069C2.03715 9.72493 1.60314 8.28289 1.53164 6.74384C1.51264 6.37233 1.62214 6.24082 1.99215 6.17332C2.47916 6.08332 2.98118 6.06432 3.46769 6.13582C5.52476 6.43633 7.27581 7.35586 8.74385 8.8129C9.58188 9.64243 10.2159 10.634 10.8689 11.6025C11.5634 12.631 12.3105 13.611 13.262 14.4146C13.598 14.6961 13.866 14.9101 14.1225 15.0681C13.349 15.1546 12.058 15.1731 11.1749 14.4746L11.1749 14.4736ZM12.141 8.25988C12.141 8.09488 12.273 7.96338 12.439 7.96338C12.4765 7.96338 12.5105 7.97088 12.541 7.98188C12.5825 7.99688 12.6205 8.01938 12.6505 8.05338C12.7035 8.10588 12.7335 8.18088 12.7335 8.25988C12.7335 8.42489 12.6015 8.55639 12.4355 8.55639C12.2695 8.55639 12.141 8.42489 12.141 8.25988ZM15.1415 9.79893C14.949 9.87793 14.7565 9.94544 14.5715 9.95294C14.2845 9.96794 13.9715 9.85143 13.8015 9.70893C13.5375 9.48742 13.3485 9.36342 13.2695 8.97691C13.2355 8.8119 13.2545 8.55639 13.2845 8.40989C13.3525 8.09438 13.277 7.89187 13.0545 7.70787C12.8735 7.55786 12.643 7.51636 12.39 7.51636C12.2955 7.51636 12.209 7.47486 12.1445 7.44136C12.039 7.38886 11.9519 7.25735 12.035 7.09585C12.0615 7.04335 12.19 6.91584 12.22 6.89334C12.5635 6.69784 12.9595 6.76184 13.326 6.90834C13.6655 7.04735 13.9225 7.30236 14.292 7.66287C14.6695 8.09838 14.7375 8.21838 14.9525 8.54539C15.1225 8.8009 15.277 9.06341 15.3831 9.36392C15.4471 9.55142 15.3641 9.70493 15.1415 9.79893Z" transform="translate(22.9509 0) scale(-1 1)" /></svg></div><svg class="cmes-knobWhale" viewBox="-0.2229 -0.0263 23.3967 17.0659" preserveAspectRatio="xMidYMid meet" aria-hidden="true" focusable="false"><path class="cmes-knobWhaleOpening" d="M11.1749 14.4736C9.15936 12.889 8.18184 12.3675 7.77832 12.39C7.40081 12.4125 7.46881 12.8445 7.55182 13.126C7.63882 13.404 7.75182 13.5955 7.91033 13.8396C8.01983 14.0011 8.09533 14.2411 7.80083 14.4216C7.15181 14.8231 6.02327 14.2866 5.97027 14.2601C4.65673 13.4865 3.5587 12.4655 2.78467 11.069C2.03715 9.72493 1.60314 8.28289 1.53164 6.74384C1.51264 6.37233 1.62214 6.24082 1.99215 6.17332C2.47916 6.08332 2.98118 6.06432 3.46769 6.13582C5.52476 6.43633 7.27581 7.35586 8.74385 8.8129C9.58188 9.64243 10.2159 10.634 10.8689 11.6025C11.5634 12.631 12.3105 13.611 13.262 14.4146C13.598 14.6961 13.866 14.9101 14.1225 15.0681C13.349 15.1546 12.058 15.1731 11.1749 14.4746L11.1749 14.4736ZM15.1415 9.79893C14.949 9.87793 14.7565 9.94544 14.5715 9.95294C14.2845 9.96794 13.9715 9.85143 13.8015 9.70893C13.5375 9.48742 13.3485 9.36342 13.2695 8.97691C13.2355 8.8119 13.2545 8.55639 13.2845 8.40989C13.3525 8.09438 13.277 7.89187 13.0545 7.70787C12.8735 7.55786 12.643 7.51636 12.39 7.51636C12.2955 7.51636 12.209 7.47486 12.1445 7.44136C12.039 7.38886 11.9519 7.25735 12.035 7.09585C12.0615 7.04335 12.19 6.91584 12.22 6.89334C12.5635 6.69784 12.9595 6.76184 13.326 6.90834C13.6655 7.04735 13.9225 7.30236 14.292 7.66287C14.6695 8.09838 14.7375 8.21838 14.9525 8.54539C15.1225 8.8009 15.277 9.06341 15.3831 9.36392C15.4471 9.55142 15.3641 9.70493 15.1415 9.79893Z" transform="translate(22.9509 0) scale(-1 1)" /><path class="cmes-knobWhaleBase" d="M22.9168 1.43018C22.6713 1.31018 22.5658 1.53918 22.4223 1.65519C22.3733 1.69269 22.3318 1.74169 22.2903 1.78669C21.9317 2.1697 21.5127 2.42121 20.9657 2.39121C20.1657 2.34621 19.4827 2.59771 18.8787 3.20973C18.7502 2.45521 18.3236 2.0047 17.6746 1.71569C17.3351 1.56568 16.9916 1.41518 16.7536 1.08867C16.5876 0.856163 16.5421 0.597155 16.4591 0.341647C16.4061 0.187643 16.3536 0.0301382 16.1761 0.00363739C15.9836 -0.0263635 15.9081 0.135141 15.8326 0.270145C15.5306 0.822162 15.4136 1.43018 15.4251 2.0462C15.4516 3.43174 16.0366 4.53527 17.1991 5.3203C17.3311 5.4103 17.3651 5.5003 17.3236 5.63181C17.2441 5.90231 17.1501 6.16482 17.0671 6.43533C17.0141 6.60784 16.9351 6.64584 16.7501 6.57033C16.1121 6.30383 15.5611 5.90931 15.074 5.4328C14.2475 4.63328 13.5 3.75075 12.568 3.05973C12.349 2.89822 12.13 2.74822 11.9034 2.60522C10.9524 1.68169 12.028 0.923165 12.277 0.833162C12.5375 0.739159 12.3675 0.41615 11.5259 0.42015C10.6844 0.42365 9.91439 0.705658 8.93286 1.08117C8.78935 1.13767 8.63835 1.17867 8.48384 1.21267C7.59332 1.04367 6.66829 1.00617 5.70226 1.11517C3.88321 1.31768 2.43016 2.1777 1.36213 3.64575C0.0790928 5.4103 -0.222916 7.41536 0.146595 9.50642C0.535106 11.7105 1.66014 13.535 3.38869 14.9616C5.18125 16.4406 7.24581 17.1657 9.60138 17.0266C11.0319 16.9441 12.6245 16.7526 14.421 15.2321C14.874 15.4576 15.3496 15.5476 16.1381 15.6151C16.7456 15.6716 17.3306 15.5851 17.7836 15.4911C18.4931 15.3411 18.4441 14.6841 18.1876 14.5636C16.1081 13.595 16.5646 13.9891 16.1496 13.67C17.2061 12.42 18.8202 10.1979 19.3182 7.17235C19.3672 6.83834 19.4297 6.36783 19.4222 6.09732C19.4182 5.93231 19.4562 5.86831 19.6447 5.84931C20.1657 5.78931 20.6712 5.64681 21.1357 5.3913C22.4833 4.65528 23.0268 3.44624 23.1548 1.9972C23.1738 1.77569 23.1508 1.54668 22.9168 1.43018ZM11.1749 14.4736C9.15936 12.889 8.18184 12.3675 7.77832 12.39C7.40081 12.4125 7.46881 12.8445 7.55182 13.126C7.63882 13.404 7.75182 13.5955 7.91033 13.8396C8.01983 14.0011 8.09533 14.2411 7.80083 14.4216C7.15181 14.8231 6.02327 14.2866 5.97027 14.2601C4.65673 13.4865 3.5587 12.4655 2.78467 11.069C2.03715 9.72493 1.60314 8.28289 1.53164 6.74384C1.51264 6.37233 1.62214 6.24082 1.99215 6.17332C2.47916 6.08332 2.98118 6.06432 3.46769 6.13582C5.52476 6.43633 7.27581 7.35586 8.74385 8.8129C9.58188 9.64243 10.2159 10.634 10.8689 11.6025C11.5634 12.631 12.3105 13.611 13.262 14.4146C13.598 14.6961 13.866 14.9101 14.1225 15.0681C13.349 15.1546 12.058 15.1731 11.1749 14.4746L11.1749 14.4736ZM12.141 8.25988C12.141 8.09488 12.273 7.96338 12.439 7.96338C12.4765 7.96338 12.5105 7.97088 12.541 7.98188C12.5825 7.99688 12.6205 8.01938 12.6505 8.05338C12.7035 8.10588 12.7335 8.18088 12.7335 8.25988C12.7335 8.42489 12.6015 8.55639 12.4355 8.55639C12.2695 8.55639 12.141 8.42489 12.141 8.25988ZM15.1415 9.79893C14.949 9.87793 14.7565 9.94544 14.5715 9.95294C14.2845 9.96794 13.9715 9.85143 13.8015 9.70893C13.5375 9.48742 13.3485 9.36342 13.2695 8.97691C13.2355 8.8119 13.2545 8.55639 13.2845 8.40989C13.3525 8.09438 13.277 7.89187 13.0545 7.70787C12.8735 7.55786 12.643 7.51636 12.39 7.51636C12.2955 7.51636 12.209 7.47486 12.1445 7.44136C12.039 7.38886 11.9519 7.25735 12.035 7.09585C12.0615 7.04335 12.19 6.91584 12.22 6.89334C12.5635 6.69784 12.9595 6.76184 13.326 6.90834C13.6655 7.04735 13.9225 7.30236 14.292 7.66287C14.6695 8.09838 14.7375 8.21838 14.9525 8.54539C15.1225 8.8009 15.277 9.06341 15.3831 9.36392C15.4471 9.55142 15.3641 9.70493 15.1415 9.79893Z" transform="translate(22.9509 0) scale(-1 1)" /><path class="cmes-knobWhalePupil" d="M12.141 8.25988C12.141 8.09488 12.273 7.96338 12.439 7.96338C12.4765 7.96338 12.5105 7.97088 12.541 7.98188C12.5825 7.99688 12.6205 8.01938 12.6505 8.05338C12.7035 8.10588 12.7335 8.18088 12.7335 8.25988C12.7335 8.42489 12.6015 8.55639 12.4355 8.55639C12.2695 8.55639 12.141 8.42489 12.141 8.25988Z" transform="translate(22.9509 0) scale(-1 1)" /></svg></div></div></div></section><span class="cmes-tip" role="tooltip" id="cmes-team-tip" aria-hidden="true"><span class="cmes-tipTitle">3x~4x token</span><span>启用智能体团队协作</span></span></div>
+      <span class="send"></span>
+    </div>
+  </div>
+</div>

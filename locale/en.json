@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "Whale reasoning-effort slider",
+    "description": "Replaces the composer model seat with a whale slider: drag the rail to pick reasoning effort (the stops come from the model itself — typically four: off / low / high / max; live tracking, pale-blue effort names, drifting sea currents, and a spout burst at Max), tap the whale knob to toggle agent teamwork for the session, and drill two levels down to switch models. Zero-build, client-only, fail-open.",
+    "detail": "docs/DETAIL.md"
+  }
+}

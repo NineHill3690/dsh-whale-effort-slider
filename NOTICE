@@ -1,0 +1,36 @@
+dsh-whale-effort-slider — third-party notices
+==============================================
+
+1. Whale artwork (the knob on the rail, the avatar button, and icon.svg)
+-------------------------------------------------------------------------
+The whale silhouette is the DeepSeek Harness logo path, taken from
+@deepseek-ai/dsh (MIT License):
+
+    Copyright (c) 2026 DeepSeek
+
+It reached this plugin through ABING1111/dsh-codex-model-effort-selector
+(MIT), whose client.js already carried the same path for the rail knob.
+This plugin reuses that path, unmodified, for the knob, the team button,
+and the plugin icon.
+
+The MIT License text under which it is redistributed is the one in LICENSE.
+The trademark note in section 2 covers the same artwork.
+
+2. Trademark
+------------
+The MIT License grants copyright permissions only; it does not grant
+trademark rights. "DeepSeek", the whale mark, and the DeepSeek Harness
+name belong to their owners.
+
+This plugin is an independent, unofficial project. It is not made,
+reviewed, sponsored, or endorsed by DeepSeek. The whale is used to show
+what the plugin controls — the reasoning-effort rail of DeepSeek Harness —
+and the plugin does not claim to be an official DeepSeek product, does not
+use the mark as its own brand, and does not alter the artwork to imply
+endorsement.
+
+3. Upstream
+-----------
+Forked from ABING1111/dsh-codex-model-effort-selector v1.1.2 (MIT),
+Copyright (c) 2026 dsh-codex-model-effort-selector contributors.
+See LICENSE.

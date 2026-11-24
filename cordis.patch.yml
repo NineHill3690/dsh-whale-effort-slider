@@ -1,0 +1,4 @@
+- insert:
+    - id: dsh-whale-effort-slider
+      name: dsh-whale-effort-slider
+      config: {}

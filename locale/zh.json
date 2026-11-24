@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "鲸鱼推理滑条 · 模型调度",
+    "description": "输入框上的模型席换成一条鲸鱼滑条：上滑条拧推理强度（档位由模型自己给，DeepSeek 常见四档 Off / Low / High / Max；拖动实时跟手、档位名淡蓝字、Max 档海流与喷气），左侧鲸鱼旋钮一键开关会话的智能体团队协作，向下两级下钻列表换模型。零构建、纯客户端、fail-open。",
+    "detail": "docs/DETAIL.zh.md"
+  }
+}
